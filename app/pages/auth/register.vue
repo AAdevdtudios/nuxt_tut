@@ -72,7 +72,6 @@ type Schema = z.output<typeof schema>;
 
 const nuxtApp = useNuxtApp();
 console.log(nuxtApp.$foo);
-const { $foo } = useNuxtApp();
 const { $api } = useNuxtApp();
 
 const showError = ref(false);
@@ -80,16 +79,15 @@ const pending = ref(false);
 const errorMessage = ref("");
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  const signUp = $api.useMutation<AuthResponse, User>("/api/auth/register", {
+    method: "POST",
+    transform: (res) => res.user,
+    onError: (err) => ({
+      message: err.data?.message || "Invalid credentials",
+    }),
+  });
   try {
-    const signUp = $api.useMutation<AuthResponse, User>("/api/auth/register", {
-      method: "POST",
-      transform: (res) => res.user,
-      onError: (err) => ({
-        message: err.data?.message || "Invalid credentials",
-      }),
-    });
     pending.value = signUp.pending.value;
-    showError.value = false;
 
     await signUp.execute(payload.data);
     toast.add({
@@ -97,11 +95,11 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       description: "Logged in successfully",
     });
 
-    // await navigateTo("/");
+    await navigateTo("/");
   } catch (error) {
-    // errorMessage.value =
-    //   signUp.error.value?.message || "Registration failed. Please try again.";
-    // showError.value = true;
+    errorMessage.value =
+      signUp.error.value?.message || "Registration failed. Please try again.";
+    showError.value = true;
   }
 }
 </script>
