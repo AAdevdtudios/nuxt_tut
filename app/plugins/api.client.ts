@@ -61,7 +61,7 @@ export default defineNuxtPlugin(() => {
         });
 
         const result = options.transform
-          ? options.transform(res)
+          ? options.transform(res as T)
           : (res as any);
         data.value = result;
         return result;
@@ -99,7 +99,7 @@ export default defineNuxtPlugin(() => {
         body: options.body,
       });
 
-      return options.transform ? options.transform(data) : (data as any);
+      return options.transform ? options.transform(data as T) : (data as any);
     } catch (error: any) {
       if (options.onError) {
         throw options.onError(error);

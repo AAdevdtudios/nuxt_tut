@@ -27,11 +27,11 @@ export const useApi = async <T>(
   const baseUrl = config.API_BASE_URL;
 
   try {
-    return await $fetch<T>(`${baseUrl}${path}`, {
+    return (await $fetch<T>(`${baseUrl}${path}`, {
       method,
       headers,
       body,
-    });
+    })) as T;
   } catch (error: any) {
     /**
      * Normalize ALL upstream errors
