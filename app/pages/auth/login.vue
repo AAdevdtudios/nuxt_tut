@@ -2,6 +2,7 @@
 import * as z from "zod";
 import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
 import type { AuthResponse, User } from "~/types";
+import { useAuthStore } from "~/stores/auth";
 
 // setup layout
 definePageMeta({
@@ -64,30 +65,23 @@ type Schema = z.output<typeof schema>;
 const showError = ref(false);
 const pending = ref(false);
 const errorMessage = ref("");
+const auth = useAuthStore();
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
-  const { $api } = useNuxtApp();
-  const login = $api.useMutation<AuthResponse, User>("/api/auth/login", {
-    method: "POST",
-    transform: (res) => res.user,
-    onError: (err) => ({
-      message: err.data?.message || "Invalid credentials",
-    }),
-  });
-  pending.value = login.pending.value;
   showError.value = false;
+  pending.value = true;
   try {
-    await login.execute(payload.data);
+    await auth.login(payload.data);
     toast.add({
       title: "Success",
       description: "Logged in successfully",
     });
-
     await navigateTo("/");
-  } catch (error) {
-    errorMessage.value =
-      login.error.value?.message || "Login failed. Please try again.";
+  } catch (error: any) {
+    errorMessage.value = error?.message || "Login failed. Please try again.";
     showError.value = true;
+  } finally {
+    pending.value = false;
   }
 }
 </script>

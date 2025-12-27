@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as z from "zod";
 import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
-import type { AuthResponse, User } from "~/types";
+import { useAuthStore } from "~/stores/auth";
 
 // setup layout
 definePageMeta({
@@ -72,34 +72,29 @@ type Schema = z.output<typeof schema>;
 
 const nuxtApp = useNuxtApp();
 console.log(nuxtApp.$foo);
-const { $api } = useNuxtApp();
+
+const auth = useAuthStore();
 
 const showError = ref(false);
 const pending = ref(false);
 const errorMessage = ref("");
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
-  const signUp = $api.useMutation<AuthResponse, User>("/api/auth/register", {
-    method: "POST",
-    transform: (res) => res.user,
-    onError: (err) => ({
-      message: err.data?.message || "Invalid credentials",
-    }),
-  });
+  showError.value = false;
+  pending.value = true;
   try {
-    pending.value = signUp.pending.value;
-
-    await signUp.execute(payload.data);
+    await auth.register(payload.data);
     toast.add({
       title: "Success",
       description: "Logged in successfully",
     });
-
     await navigateTo("/");
-  } catch (error) {
+  } catch (error: any) {
     errorMessage.value =
-      signUp.error.value?.message || "Registration failed. Please try again.";
+      error?.message || "Registration failed. Please try again.";
     showError.value = true;
+  } finally {
+    pending.value = false;
   }
 }
 </script>

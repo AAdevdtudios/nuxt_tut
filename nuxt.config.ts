@@ -11,6 +11,7 @@ export default defineNuxtConfig({
     "@vee-validate/nuxt",
     "@pinia/nuxt",
     "pinia-plugin-persistedstate",
+    "@nuxtjs/color-mode",
   ],
   runtimeConfig: {
     API_TOKEN_KEY: process.env.API_TOKEN_KEY,
