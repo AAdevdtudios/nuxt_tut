@@ -43,11 +43,7 @@ const state = ref("add");
     <template #body>
       <AddProjectViewport>
         <template #actions>
-          <UTextarea
-            color="neutral"
-            variant="subtle"
-            placeholder="Type something..."
-          />
+          <AddProjectEditorExample />
         </template>
       </AddProjectViewport>
     </template>
