@@ -1,14 +1,15 @@
 <template>
-  <UDashboardLayout>
-    <template #header>
-      <h1 class="text-3xl font-bold">Dashboard</h1>
-    </template>
-    <template #default>
-      <div class="p-4">
-        <p>Welcome to your dashboard!</p>
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-3xl font-bold text-foreground">Welcome back, Alex</h2>
+        <p class="mt-1 text-muted-foreground">
+          Here's your learning overview for today
+        </p>
       </div>
-    </template>
-  </UDashboardLayout>
+      <AddProjectBtn />
+    </div>
+  </div>
 </template>
 
 <script lang="ts" setup>

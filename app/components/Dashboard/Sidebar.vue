@@ -87,17 +87,17 @@ onMounted(async () => {
     <template #header="{ collapsed }">
       <div
         v-if="collapsed"
-        className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary"
+        class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary"
       >
-        <span className="text-sm font-bold text-primary-foreground">AI</span>
+        <span class="text-sm font-bold text-primary-foreground">AI</span>
       </div>
-      <div v-else className="flex items-center gap-2 pb-4">
+      <div v-else class="flex items-center gap-2 pb-4">
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary"
+          class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary"
         >
-          <span className="text-sm font-bold text-primary-foreground">AI</span>
+          <span class="text-sm font-bold text-primary-foreground">AI</span>
         </div>
-        <span className="text-lg font-semibold text-sidebar-foreground"
+        <span class="text-lg font-semibold text-sidebar-foreground"
           >LearnHub</span
         >
       </div>

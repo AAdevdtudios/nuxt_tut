@@ -12,6 +12,7 @@ export default defineNuxtConfig({
     "@pinia/nuxt",
     "pinia-plugin-persistedstate",
     "@nuxtjs/color-mode",
+    "dragon-editor",
   ],
   runtimeConfig: {
     API_TOKEN_KEY: process.env.API_TOKEN_KEY,
