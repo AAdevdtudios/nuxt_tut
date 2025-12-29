@@ -93,27 +93,39 @@
     </div>
     <UCard>
       <template #header>
-        <p class="text-lg font-medium text-muted-foreground">Active Projects</p>
+        <div class="flex justify-between items-center">
+          <p class="text-lg font-medium text-muted-foreground">
+            Active Projects
+          </p>
+          <UButton size="sm" variant="outline" class="ml-auto"
+            >Add New Project</UButton
+          >
+        </div>
       </template>
-      <div class="space-y-4">
-        <ul class="divide-y divide-default">
-          <li v-for="project in [1, 2, 3, 4]" :key="project">
-            <UCard :ui="{ body: 'p-4 w-full' }">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="font-medium text-foreground">Project Alpha</p>
-                  <p class="text-sm text-muted-foreground">
-                    Due Date: June 30, 2024
-                  </p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <UButton size="sm" variant="outline">View</UButton>
-                  <UButton size="sm" variant="ghost">Continue</UButton>
-                </div>
-              </div>
-            </UCard>
-          </li>
-        </ul>
+      <div class="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <UCard
+          v-for="project in [1, 2, 3, 4]"
+          :key="project"
+          :ui="{ header: 'border-0' }"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-foreground">Project Alpha</p>
+              <p class="text-sm text-muted-foreground">
+                Due Date: July 15, 2024
+              </p>
+              <p class="text-sm text-muted-foreground">24 tasks remaining</p>
+            </div>
+            <UButton size="sm" variant="outline">View</UButton>
+          </div>
+          <!-- Progress bar or other project details can go here -->
+          <div class="mt-11">
+            <UProgress value="60" class="mt-4" />
+            <p class="text-sm text-muted-foreground mt-1">
+              6{{ project }}% Complete
+            </p>
+          </div>
+        </UCard>
       </div>
     </UCard>
   </DashboardBodyLayout>
