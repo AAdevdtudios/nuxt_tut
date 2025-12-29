@@ -82,7 +82,11 @@ onMounted(async () => {
   <UDashboardSidebar
     collapsible
     :default-size="22"
-    :ui="{ footer: 'border-t border-default' }"
+    :ui="{
+      footer: 'border-t border-default',
+      header: 'border-b border-default',
+      body: 'px-2 py-4 space-y-4',
+    }"
   >
     <template #header="{ collapsed }">
       <div
@@ -91,7 +95,7 @@ onMounted(async () => {
       >
         <span class="text-sm font-bold text-primary-foreground">AI</span>
       </div>
-      <div v-else class="flex items-center gap-2 pb-4">
+      <div v-else class="flex items-center gap-2">
         <div
           class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary"
         >
@@ -104,7 +108,6 @@ onMounted(async () => {
     </template>
 
     <template #default="{ collapsed }">
-      <USeparator />
       <UNavigationMenu
         :collapsed="collapsed"
         :items="items[0]"

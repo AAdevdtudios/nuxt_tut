@@ -1,6 +1,6 @@
 <template>
   <div class="editor-area">
-    <DragonEditor v-model="contentData" style="height: 100vh" />
+    <DragonEditor v-model="contentData" />
   </div>
 </template>
 

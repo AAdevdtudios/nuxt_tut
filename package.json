@@ -20,6 +20,7 @@
     "dragon-editor": "^3.8.2",
     "eslint": "^9.39.2",
     "nuxt": "^4.2.2",
+    "nuxt-lottie": "1.0.8",
     "nuxt-lucide-icons": "2.0.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "4.7.1",
