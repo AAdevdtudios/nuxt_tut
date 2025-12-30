@@ -7,11 +7,12 @@ const items = ref<NavigationMenuItem[][]>([
     {
       label: "Dashboard",
       icon: "i-lucide-layout-dashboard",
-      active: route.path === "/dashboard",
+      to: "/dashboard",
     },
     {
       label: "Library",
       icon: "i-lucide-library-big",
+      to: "/dashboard/library",
     },
     {
       label: "AI Chat",
