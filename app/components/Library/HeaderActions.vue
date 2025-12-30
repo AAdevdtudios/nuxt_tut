@@ -37,6 +37,8 @@
 </template>
 
 <script lang="ts" setup>
+import type { SelectItem } from "@nuxt/ui";
+
 const emit = defineEmits(["update:searchQuery", "update:value", "changeView"]);
 const props = defineProps({
   searchQuery: String,
@@ -47,16 +49,14 @@ const props = defineProps({
   },
 });
 
-const documentType = ref([
-  "All",
-  "PDF",
-  "DOCX",
-  "TXT",
-  "Website",
-  "Note",
-  "AI Generated",
+const documentType = ref<SelectItem[]>([
+  { label: "All", value: "all" },
+  { label: "PDF", value: "pdf" },
+  { label: "DOCX", value: "docx" },
+  { label: "TXT", value: "txt" },
+  { label: "Website", value: "website" },
+  { label: "AI Generated", value: "ai_generated" },
 ]);
-
 const localSearchQuery = ref(props.searchQuery ?? "");
 const localValue = ref(props.value ?? "All");
 const searchLoading = ref(false);
