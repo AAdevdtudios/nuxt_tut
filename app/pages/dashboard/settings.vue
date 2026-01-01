@@ -3,7 +3,7 @@
     title="Settings"
     description="Manage your account and preferences"
   >
-    <div class="grid grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
       <!-- Profile Settings -->
       <UCard
         :ui="{
@@ -151,7 +151,7 @@
             </h3>
           </div>
         </template>
-        <div class="p-6 grid grid-cols-3 gap-4">
+        <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
           <UPageCard
             icon="i-lucide-gift"
             class="border border-primary bg-primary/10 text-primary-foreground"

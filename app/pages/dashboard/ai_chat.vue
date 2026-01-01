@@ -1,10 +1,9 @@
 <template>
   <DashboardBodyLayout title="">
     <div class="flex h-[calc(100vh-8rem)] gap-4">
-      <!-- Chat History Sidebar -->
       <div
         v-if="showHistory"
-        class="w-64 flex-shrink-0 rounded-lg border border-default bg-card"
+        class="w-64 shrink-0 rounded-lg border border-default bg-card"
       >
         <div
           class="flex items-center justify-between border-b border-default p-4"
@@ -60,7 +59,7 @@
               icon="i-lucide-history"
               variant="outline"
               size="sm"
-              @click="showHistory = true"
+              @click="showChatHistory()"
               aria-label="Show chat history"
             />
             <div>
@@ -125,7 +124,7 @@
                   <!-- Avatar -->
                   <div
                     :class="[
-                      'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-medium',
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-medium',
                       message.role === 'assistant'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground',
@@ -166,7 +165,7 @@
               <div v-if="isTyping" class="flex justify-start">
                 <div class="flex gap-3">
                   <div
-                    class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
                   >
                     <UIcon name="i-lucide-sparkles" class="h-4 w-4" />
                   </div>
@@ -221,7 +220,7 @@
           <!-- Library Sidebar -->
           <div
             v-if="showLibrary"
-            class="w-64 flex-shrink-0 rounded-lg border border-default bg-card"
+            class="w-64 shrink-0 rounded-lg border border-default bg-card"
           >
             <div
               class="flex items-center justify-between border-b border-default p-4"
@@ -275,21 +274,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import type { ChatHistory } from "~/types";
+import { LazyAiChatHistorySlideOver } from "#components";
 
 type Message = {
   id: number;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-};
-
-type ChatHistory = {
-  id: number;
-  title: string;
-  lastMessage: string;
-  timestamp: Date;
-  messages: Message[];
 };
 
 const chatHistories = ref<ChatHistory[]>([
@@ -337,7 +329,50 @@ const inputValue = ref("");
 const isTyping = ref(false);
 const showLibrary = ref(false);
 const selectedContent = ref<any[]>([]);
-const showHistory = ref(true);
+const showHistory = ref(false);
+const showMobileHistory = ref(false);
+const isMobile = ref(false);
+let media: MediaQueryList;
+
+onMounted(() => {
+  media = window.matchMedia("(max-width: 767px)");
+  isMobile.value = media.matches;
+
+  const handler = (e: MediaQueryListEvent) => {
+    isMobile.value = e.matches;
+  };
+
+  media.addEventListener("change", handler);
+
+  onUnmounted(() => {
+    media.removeEventListener("change", handler);
+  });
+});
+
+const overlay = useOverlay();
+const mobileChatSlideOver = overlay.create(LazyAiChatHistorySlideOver);
+async function showChatHistory() {
+  console.log(isMobile.value);
+
+  if (isMobile.value) {
+    showMobileHistory.value = true;
+    const instance = await mobileChatSlideOver.open({
+      chats: chatHistories.value,
+      currentChatId: currentChatId.value,
+      onLoadChat: (chatId: number) => {
+        loadChat(chatId);
+        mobileChatSlideOver.close();
+      },
+      onNewChat: () => {
+        startNewChat();
+        mobileChatSlideOver.close();
+      },
+    });
+    console.log(instance);
+  } else {
+    showHistory.value = true;
+  }
+}
 
 const libraryItems = [
   { id: 1, title: "Advanced Calculus Notes", type: "PDF" },

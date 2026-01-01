@@ -60,3 +60,11 @@ export const libraryTypes = [
   { label: "AI Generated", value: "ai_generated" },
 ] as const;
 export type LibraryTypeValue = (typeof libraryTypes)[number]["value"];
+
+export type ChatHistory = {
+  id: number;
+  title: string;
+  lastMessage: string;
+  timestamp: Date;
+  messages: Message[];
+};

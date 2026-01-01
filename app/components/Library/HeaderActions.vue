@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-between">
+  <div class="flex gap-2 items-center justify-between">
     <UFieldGroup class="flex flex-1">
       <UInput
         v-model="localSearchQuery"

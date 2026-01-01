@@ -1,7 +1,9 @@
 <template>
   <div
     :class="
-      viewType === 'grid' ? 'grid grid-cols-4 gap-4' : 'flex flex-col gap-2'
+      viewType === 'grid'
+        ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'
+        : 'flex flex-col gap-2'
     "
   >
     <div
@@ -9,7 +11,7 @@
       :key="item.id"
       :class="
         viewType === 'grid'
-          ? 'border p-4 rounded-lg'
+          ? 'border border-default p-4 rounded-lg'
           : 'flex items-center p-2 rounded-lg'
       "
     >

@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-area">
+  <div class="editor-area max-h-100">
     <DragonEditor v-model="contentData" />
   </div>
 </template>
