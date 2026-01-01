@@ -15,16 +15,12 @@ defineProps({
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h2 class="text-3xl font-bold text-foreground">{{ title }}</h2>
-        <p class="mt-1 text-muted-foreground">
-          {{ description ?? "" }}
-        </p>
-      </div>
-      <slot name="actions" />
-    </div>
+  <div class="space-y-1">
+    <DashboardHeader :title="title" :description="description">
+      <template #actions>
+        <slot name="actions" />
+      </template>
+    </DashboardHeader>
     <slot />
   </div>
 </template>

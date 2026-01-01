@@ -14,6 +14,7 @@ export default defineNuxtConfig({
     "@nuxtjs/color-mode",
     "dragon-editor",
     "nuxt-lottie",
+    "@nuxtjs/i18n",
   ],
   runtimeConfig: {
     API_TOKEN_KEY: process.env.API_TOKEN_KEY,

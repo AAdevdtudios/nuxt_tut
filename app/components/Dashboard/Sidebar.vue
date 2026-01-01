@@ -17,11 +17,13 @@ const items = ref<NavigationMenuItem[][]>([
     {
       label: "AI Chat",
       icon: "i-lucide-bot-message-square",
+      to: "/dashboard/ai_chat",
     },
     {
       label: "Projects",
       icon: "i-lucide-folder-kanban",
       defaultOpen: true,
+      to: "/dashboard/projects",
       children: [],
     },
     {
@@ -31,14 +33,17 @@ const items = ref<NavigationMenuItem[][]>([
     {
       label: "Question Generator",
       icon: "i-lucide-circle-help",
+      to: "/dashboard/question_generator",
     },
     {
       label: "Explore",
       icon: "i-lucide-telescope",
+      to: "/dashboard/explore",
     },
     {
       label: "Settings",
       icon: "i-lucide-settings",
+      to: "/dashboard/settings",
     },
   ],
   [
