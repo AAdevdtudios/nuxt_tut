@@ -46,6 +46,12 @@ export interface LibraryItem {
   // updatedAt: string;
 }
 
+export interface LibrarySelection {
+  id: number;
+  title: string;
+  type: LibraryTypeValue;
+}
+
 export interface LibraryType {
   label: string;
   value: string;

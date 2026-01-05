@@ -87,7 +87,9 @@ onMounted(async () => {
 <template>
   <UDashboardSidebar
     collapsible
-    :default-size="22"
+    :menu="{
+      title: 'Dev',
+    }"
     :ui="{
       footer: 'border-t border-default',
       header: 'border-b border-default',

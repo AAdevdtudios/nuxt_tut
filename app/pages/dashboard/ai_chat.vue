@@ -70,7 +70,7 @@
             </div>
           </div>
           <UButton
-            @click="showLibrary = !showLibrary"
+            @click="handleLibraryToggle()"
             variant="outline"
             icon="i-lucide-file-text"
             :label="`Library (${selectedContent.length})`"
@@ -274,8 +274,11 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatHistory } from "~/types";
-import { LazyAiChatHistorySlideOver } from "#components";
+import type { ChatHistory, LibrarySelection } from "~/types";
+import {
+  LazyAiChatHistorySlideOver,
+  LazyAiChatLibraryDrawer,
+} from "#components";
 
 type Message = {
   id: number;
@@ -351,6 +354,7 @@ onMounted(() => {
 
 const overlay = useOverlay();
 const mobileChatSlideOver = overlay.create(LazyAiChatHistorySlideOver);
+
 async function showChatHistory() {
   console.log(isMobile.value);
 
@@ -374,12 +378,27 @@ async function showChatHistory() {
   }
 }
 
-const libraryItems = [
-  { id: 1, title: "Advanced Calculus Notes", type: "PDF" },
-  { id: 2, title: "Biology Chapter 5", type: "Document" },
-  { id: 3, title: "Chemistry Lab Report", type: "Note" },
-  { id: 4, title: "Physics Formula Sheet", type: "PDF" },
-];
+const libraryItems = ref<LibrarySelection[]>([
+  { id: 1, title: "Advanced Calculus Notes", type: "pdf" },
+  { id: 2, title: "Biology Chapter 5", type: "docx" },
+  { id: 3, title: "Chemistry Lab Report", type: "note" },
+  { id: 4, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 5, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 6, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 7, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 8, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 9, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 10, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 11, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 12, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 13, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 14, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 15, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 16, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 17, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 18, title: "Physics Formula Sheet", type: "pdf" },
+  { id: 19, title: "Physics Formula Sheet", type: "pdf" },
+]);
 
 const formatTime = (date: Date) => {
   const d = new Date(date);
@@ -388,6 +407,20 @@ const formatTime = (date: Date) => {
 
 const isSelected = (item: any) => {
   return selectedContent.value.some((c) => c.id === item.id);
+};
+const mobileLibraryDrawer = overlay.create(LazyAiChatLibraryDrawer);
+const handleLibraryToggle = async () => {
+  if (isMobile.value) {
+    await mobileLibraryDrawer.open({
+      selected: selectedContent.value,
+      items: libraryItems.value,
+      "onUpdate:selected": (items: LibrarySelection[]) => {
+        selectedContent.value = items;
+      },
+    });
+  } else {
+    showLibrary.value = !showLibrary.value;
+  }
 };
 
 const handleSend = () => {

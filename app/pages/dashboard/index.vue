@@ -121,9 +121,9 @@
             </div>
             <!-- Progress bar or other project details can go here -->
             <div class="mt-11">
-              <UProgress value="60" class="mt-4" />
+              <UProgress v-model="projectProgress[project]" class="mt-4" />
               <p class="text-sm text-muted-foreground mt-1">
-                6{{ project }}% Complete
+                {{ projectProgress[project] }}% Complete
               </p>
             </div>
           </UCard>
@@ -134,8 +134,21 @@
 </template>
 
 <script lang="ts" setup>
+import { ref, computed } from 'vue';
+
 // No additional script logic needed for this simple dashboard page
 definePageMeta({
   layout: "dashboard",
 });
+
+const projectProgress = ref<Record<number, number>>({
+  1: 20,
+  2: 30,
+  3: 40,
+  4: 50,
+});
+
+function progressNumber(n: number) {
+  return n * 10 + 10;
+}
 </script>
