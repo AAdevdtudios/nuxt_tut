@@ -1,12 +1,17 @@
 <template>
   <div class="flex w-full items-center justify-between">
     <div>
-      <h2 class="text-3xl font-bold text-foreground">{{ title }}</h2>
+      <div class="flex items-center gap-3">
+        <slot name="leading-icon" />
+        <h2 class="text-3xl font-bold text-foreground">{{ title }}</h2>
+      </div>
       <p class="mt-1 text-muted-foreground">
         {{ description ?? "" }}
       </p>
     </div>
-    <slot name="actions" />
+    <div class="flex gap-4 items-center">
+      <slot name="actions" />
+    </div>
   </div>
 </template>
 <script setup lang="ts">

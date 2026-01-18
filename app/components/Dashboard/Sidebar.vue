@@ -29,6 +29,7 @@ const items = ref<NavigationMenuItem[][]>([
     {
       label: "Timetable",
       icon: "i-lucide-calendar",
+      to: "/dashboard/timetable",
     },
     {
       label: "Question Generator",

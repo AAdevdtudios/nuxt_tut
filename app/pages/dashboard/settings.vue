@@ -151,7 +151,7 @@
             </h3>
           </div>
         </template>
-        <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="p-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
           <UPageCard
             icon="i-lucide-gift"
             class="border border-primary bg-primary/10 text-primary-foreground"
@@ -175,7 +175,9 @@
           />
         </div>
         <template #footer>
-          <div class="w-full flex flex-row-reverse gap-2">
+          <div
+            class="w-full flex flex-col-reverse items-center xl:flex-row-reverse gap-2"
+          >
             <UButton variant="solid" label="Manage Payment Methods" />
             <UButton variant="ghost" label="View Payment History" />
           </div>

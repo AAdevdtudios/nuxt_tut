@@ -3,397 +3,353 @@
     title="AI Question Generator"
     description="Upload a PDF and generate practice questions using AI"
   >
-    <div class="p-4 lg:p-8 space-y-6 mt-4">
-      <!-- Header -->
-      <div>
-        <h1 class="text-3xl font-bold flex items-center gap-2">
-          <UIcon name="i-lucide-file-question" class="h-8 w-8 text-primary" />
-          AI Question Generator
-        </h1>
-        <p class="text-muted-foreground mt-2">
-          Upload a PDF and generate practice questions using AI
-        </p>
-      </div>
+    <template #leading-icon>
+      <UIcon name="i-lucide-file-question" class="h-8 w-8 text-primary" />
+    </template>
 
-      <!-- Upload and Configuration Form -->
-      <UTabs
-        v-if="!quizMode"
-        :items="[{ label: 'Generate', value: 'generate' }]"
-        v-model="tab"
-        class="mb-4"
-      />
-      <UCard v-if="!quizMode">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-sparkles" class="h-5 w-5" />
-            Generate Questions from PDF
-          </div>
-          <div class="text-muted-foreground text-sm mt-1">
-            Upload your study material and configure question generation
-            settings
-          </div>
-        </template>
-        <div class="space-y-6">
-          <!-- File Upload -->
-          <div class="space-y-2">
-            <label class="font-medium">Upload PDF Document *</label>
-            <div
-              class="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center"
-            >
-              <UIcon
-                name="i-lucide-upload"
-                class="h-8 w-8 text-muted-foreground mx-auto mb-2"
-              />
-              <div class="space-y-2">
-                <p class="text-sm text-muted-foreground">
-                  {{
-                    file
-                      ? file.name
-                      : "Click to upload or drag and drop your PDF file"
-                  }}
-                </p>
-                <UInput
-                  type="file"
-                  accept=".pdf"
-                  @change="handleFileChange"
-                  class="max-w-xs mx-auto"
-                />
-              </div>
-            </div>
-          </div>
+    <UCard v-if="!quizMode">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <UIcon name="i-lucide-sparkles" class="h-5 w-5" />
+          Generate Questions from PDF
+        </div>
+        <div class="text-muted-foreground text-sm mt-1">
+          Upload your study material and configure question generation settings
+        </div>
+      </template>
+      <div class="space-y-6">
+        <!-- File Upload -->
+        <UFormField label="Upload PDF Document">
+          <UFileUpload
+            position="inside"
+            layout="list"
+            label="Drop your PDF here"
+            description="PDF files only (max. 2MB)"
+            class="w-full mt-3"
+            v-model="file"
+            accept="application/pdf"
+            :ui="{
+              base: 'min-h-48',
+            }"
+          />
+        </UFormField>
 
-          <!-- Configuration Options -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-2">
-              <label>Question Type *</label>
-              <USelect
-                v-model="formData.questionType"
-                :items="questionTypes"
-                placeholder="Select question type"
-                option-attribute="label"
-                value-attribute="value"
-              />
-            </div>
-            <div class="space-y-2">
-              <label>Difficulty Level *</label>
-              <USelect
-                v-model="formData.difficulty"
-                :items="difficulties"
-                placeholder="Select difficulty"
-                option-attribute="label"
-                value-attribute="value"
-              />
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-2">
-              <label>Number of Questions</label>
-              <USelect
-                v-model="formData.numberOfQuestions"
-                :items="numberOptions"
-                option-attribute="label"
-                value-attribute="value"
-              />
-            </div>
-            <div class="space-y-2">
-              <label>Focus Area (Optional)</label>
-              <UInput
-                v-model="formData.focusArea"
-                placeholder="e.g., Chapter 3, Photosynthesis"
-              />
-            </div>
-          </div>
-          <div class="space-y-2">
-            <label>Additional Instructions (Optional)</label>
-            <UTextarea
-              v-model="formData.additionalInstructions"
-              placeholder="Any specific requirements or focus areas for the questions..."
-              :rows="3"
+        <!-- Configuration Options -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UFormField label="Question Type" required class="w-full">
+            <USelect
+              v-model="formData.questionType"
+              :items="questionTypes"
+              placeholder="Select question type"
+              option-attribute="label"
+              value-attribute="value"
+              class="w-full"
             />
+          </UFormField>
+          <UFormField label="Difficulty Level" required class="w-full">
+            <USelect
+              v-model="formData.difficulty"
+              :items="difficulties"
+              placeholder="Select difficulty"
+              option-attribute="label"
+              value-attribute="value"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UFormField label="Number of Questions" class="w-full">
+            <USelect
+              v-model="formData.numberOfQuestions"
+              :items="numberOptions"
+              option-attribute="label"
+              value-attribute="value"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField label="Focus Area (Optional)" class="w-full">
+            <UInput
+              v-model="formData.focusArea"
+              placeholder="e.g., Chapter 3, Photosynthesis"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+        <UFormField label="Additional Instructions (Optional)" class="w-full">
+          <UTextarea
+            v-model="formData.additionalInstructions"
+            placeholder="Any specific requirements or focus areas for the questions..."
+            :rows="3"
+            class="w-full"
+          />
+        </UFormField>
+        <UButton
+          :loading="isGenerating"
+          :disabled="isGenerating || !file"
+          block
+          @click="generateQuestions"
+        >
+          <template #icon>
+            <UIcon
+              :name="isGenerating ? 'i-lucide-refresh-cw' : 'i-lucide-sparkles'"
+              class="h-4 w-4"
+          /></template>
+          {{ isGenerating ? "Generating Questions..." : "Generate Questions" }}
+        </UButton>
+      </div>
+    </UCard>
+
+    <!-- Generated Questions - Start Quiz -->
+    <UCard v-if="questions.length > 0 && !quizMode">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-lg font-semibold">
+              Generated Questions ({{ questions.length }})
+            </div>
+            <div class="text-muted-foreground text-sm">
+              Ready to start your interactive quiz?
+            </div>
           </div>
           <UButton
-            :loading="isGenerating"
-            :disabled="isGenerating || !file"
-            block
-            @click="generateQuestions"
-          >
-            <template #icon
-              ><UIcon
-                :name="
-                  isGenerating ? 'i-lucide-refresh-cw' : 'i-lucide-sparkles'
-                "
-                class="h-4 w-4"
-            /></template>
-            {{
-              isGenerating ? "Generating Questions..." : "Generate Questions"
-            }}
-          </UButton>
+            @click="startQuiz"
+            color="primary"
+            class="flex items-center gap-2"
+            label="Start Interactive Quiz"
+            icon="i-lucide-sparkles"
+          />
         </div>
-      </UCard>
-
-      <!-- Generated Questions - Start Quiz -->
-      <UCard v-if="questions.length > 0 && !quizMode">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-lg font-semibold">
-                Generated Questions ({{ questions.length }})
-              </div>
-              <div class="text-muted-foreground text-sm">
-                Ready to start your interactive quiz?
-              </div>
-            </div>
-            <UButton
-              @click="startQuiz"
-              color="primary"
-              class="flex items-center gap-2"
-            >
-              <UIcon name="i-lucide-sparkles" class="h-4 w-4" />
-              Start Interactive Quiz
-            </UButton>
+      </template>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="text-center p-4 border rounded-lg">
+          <div class="text-2xl font-bold text-primary">
+            {{ questions.length }}
           </div>
-        </template>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="text-center p-4 border rounded-lg">
-            <div class="text-2xl font-bold text-primary">
-              {{ questions.length }}
-            </div>
-            <p class="text-sm text-muted-foreground">Total Questions</p>
-          </div>
-          <div class="text-center p-4 border rounded-lg">
-            <div class="text-2xl font-bold text-primary">
-              {{ questions.filter((q) => q.type === "multiple-choice").length }}
-            </div>
-            <p class="text-sm text-muted-foreground">Multiple Choice</p>
-          </div>
-          <div class="text-center p-4 border rounded-lg">
-            <div class="text-2xl font-bold text-primary">
-              {{ questions.filter((q) => q.difficulty === "hard").length }}
-            </div>
-            <p class="text-sm text-muted-foreground">Hard Questions</p>
-          </div>
+          <p class="text-sm text-muted-foreground">Total Questions</p>
         </div>
-        <p class="text-muted-foreground text-center">
-          Click "Start Interactive Quiz" to begin answering questions one by one
-          with instant feedback!
-        </p>
-      </UCard>
-
-      <!-- Interactive Quiz Mode -->
-      <div
-        v-if="quizMode && !quizCompleted && currentQuestion"
-        class="space-y-6"
-      >
-        <UCard>
-          <div class="pt-6">
-            <div class="space-y-2">
-              <div class="flex justify-between text-sm">
-                <span
-                  >Question {{ currentQuestionIndex + 1 }} of
-                  {{ questions.length }}</span
-                >
-                <span>{{ Math.round(progress) }}% Complete</span>
-              </div>
-              <UProgress :value="progress" class="w-full" />
-            </div>
+        <div class="text-center p-4 border rounded-lg">
+          <div class="text-2xl font-bold text-primary">
+            {{ questions.filter((q) => q.type === "multiple-choice").length }}
           </div>
-        </UCard>
-        <UCard>
-          <template #header>
-            <div class="flex items-center gap-2 mb-2">
-              <UBadge :color="getTypeColor(currentQuestion.type)">{{
-                currentQuestion.type.replace("-", " ")
-              }}</UBadge>
-              <UBadge :color="getDifficultyColor(currentQuestion.difficulty)">{{
-                currentQuestion.difficulty
-              }}</UBadge>
-            </div>
-            <div class="text-xl font-semibold">
-              {{ currentQuestion.question }}
-            </div>
-          </template>
-          <div class="space-y-6">
-            <!-- Answer Input -->
-            <div v-if="!showAnswer" class="space-y-4">
-              <URadioGroup
-                v-if="
-                  currentQuestion.type === 'multiple-choice' &&
-                  currentQuestion.options
-                "
-                v-model="currentAnswer"
-              >
-                <URadio
-                  v-for="(option, index) in currentQuestion.options"
-                  :key="index"
-                  :value="option"
-                >
-                  {{ String.fromCharCode(97 + index) }}) {{ option }}
-                </URadio>
-              </URadioGroup>
-              <UInput
-                v-else-if="currentQuestion.type === 'short-answer'"
-                v-model="currentAnswer"
-                placeholder="Enter your answer..."
-                class="text-lg"
-              />
-              <UTextarea
-                v-else
-                v-model="currentAnswer"
-                placeholder="Write your essay answer here..."
-                :rows="6"
-                class="text-base"
-              />
-              <UButton
-                @click="submitAnswer"
-                block
-                :disabled="!currentAnswer.trim()"
-                >Submit Answer</UButton
-              >
-            </div>
-            <!-- Answer Feedback -->
-            <div v-else class="space-y-4">
-              <div class="p-4 border rounded-lg bg-muted/50">
-                <h4 class="font-semibold mb-2">Your Answer:</h4>
-                <p class="text-muted-foreground">{{ currentAnswer }}</p>
-              </div>
-              <div
-                v-if="currentQuestion.answer"
-                class="p-4 border rounded-lg bg-green-50 dark:bg-green-950/20"
-              >
-                <h4 class="font-semibold mb-2 flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-check-circle"
-                    class="h-4 w-4 text-green-600"
-                  />
-                  Correct Answer:
-                </h4>
-                <p class="text-green-700 dark:text-green-300">
-                  {{ currentQuestion.answer }}
-                </p>
-              </div>
-              <div
-                v-if="currentQuestion.type !== 'essay'"
-                :class="[
-                  'p-4 border rounded-lg',
-                  userAnswers[userAnswers.length - 1]?.isCorrect
-                    ? 'bg-green-50 dark:bg-green-950/20'
-                    : 'bg-red-50 dark:bg-red-950/20',
-                ]"
-              >
-                <div class="flex items-center gap-2">
-                  <UIcon
-                    :name="
-                      userAnswers[userAnswers.length - 1]?.isCorrect
-                        ? 'i-lucide-check-circle'
-                        : 'i-lucide-x-circle'
-                    "
-                    :class="[
-                      'h-5 w-5',
-                      userAnswers[userAnswers.length - 1]?.isCorrect
-                        ? 'text-green-600'
-                        : 'text-red-600',
-                    ]"
-                  />
-                  <span
-                    :class="[
-                      'font-semibold',
-                      userAnswers[userAnswers.length - 1]?.isCorrect
-                        ? 'text-green-700 dark:text-green-300'
-                        : 'text-red-700 dark:text-red-300',
-                    ]"
-                  >
-                    {{
-                      userAnswers[userAnswers.length - 1]?.isCorrect
-                        ? "Correct!"
-                        : "Incorrect"
-                    }}
-                  </span>
-                </div>
-              </div>
-              <!-- Navigation -->
-              <div class="flex justify-between">
-                <UButton
-                  variant="outline"
-                  @click="previousQuestion"
-                  :disabled="currentQuestionIndex === 0"
-                >
-                  <UIcon name="i-lucide-arrow-left" class="h-4 w-4 mr-2" />
-                  Previous
-                </UButton>
-                <UButton @click="nextQuestion">
-                  {{
-                    currentQuestionIndex === questions.length - 1
-                      ? "Finish Quiz"
-                      : "Next Question"
-                  }}
-                  <UIcon name="i-lucide-arrow-right" class="h-4 w-4 ml-2" />
-                </UButton>
-              </div>
-            </div>
+          <p class="text-sm text-muted-foreground">Multiple Choice</p>
+        </div>
+        <div class="text-center p-4 border rounded-lg">
+          <div class="text-2xl font-bold text-primary">
+            {{ questions.filter((q) => q.difficulty === "hard").length }}
           </div>
-        </UCard>
+          <p class="text-sm text-muted-foreground">Hard Questions</p>
+        </div>
       </div>
+      <p class="text-muted-foreground text-center">
+        Click "Start Interactive Quiz" to begin answering questions one by one
+        with instant feedback!
+      </p>
+    </UCard>
 
-      <!-- Quiz Completed -->
-      <UCard v-if="quizCompleted">
-        <template #header>
-          <div class="text-center text-2xl font-semibold">
-            Quiz Completed! 🎉
+    <!-- Interactive Quiz Mode -->
+    <div v-if="quizMode && !quizCompleted && currentQuestion" class="space-y-6">
+      <UCard>
+        <div class="pt-6">
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <span
+                >Question {{ currentQuestionIndex + 1 }} of
+                {{ questions.length }}</span
+              >
+              <span>{{ Math.round(progress) }}% Complete</span>
+            </div>
+            <UProgress :value="progress" class="w-full" />
           </div>
-          <div class="text-center text-muted-foreground">
-            Here are your results
+        </div>
+      </UCard>
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2 mb-2">
+            <UBadge :color="getTypeColor(currentQuestion.type)">{{
+              currentQuestion.type.replace("-", " ")
+            }}</UBadge>
+            <UBadge :color="getDifficultyColor(currentQuestion.difficulty)">{{
+              currentQuestion.difficulty
+            }}</UBadge>
+          </div>
+          <div class="text-xl font-semibold">
+            {{ currentQuestion.question }}
           </div>
         </template>
         <div class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="text-center p-4 border rounded-lg">
-              <div class="text-3xl font-bold text-primary">
-                {{ correctAnswers }}
-              </div>
-              <p class="text-sm text-muted-foreground">Correct Answers</p>
-            </div>
-            <div class="text-center p-4 border rounded-lg">
-              <div class="text-3xl font-bold text-primary">
-                {{ totalAnswered }}
-              </div>
-              <p class="text-sm text-muted-foreground">Total Answered</p>
-            </div>
-            <div class="text-center p-4 border rounded-lg">
-              <div class="text-3xl font-bold text-primary">
-                {{
-                  totalAnswered > 0
-                    ? Math.round((correctAnswers / totalAnswered) * 100)
-                    : 0
-                }}%
-              </div>
-              <p class="text-sm text-muted-foreground">Score</p>
-            </div>
-          </div>
-          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <!-- Answer Input -->
+          <div v-if="!showAnswer" class="space-y-4">
+            <URadioGroup
+              v-if="
+                currentQuestion.type === 'multiple-choice' &&
+                currentQuestion.options
+              "
+              v-model="currentAnswer"
+              :items="
+                currentQuestion.options.map((option, index) => ({
+                  label: String.fromCharCode(97 + index) + ') ' + option,
+                  value: option,
+                }))
+              "
+            />
+            <UInput
+              v-else-if="currentQuestion.type === 'short-answer'"
+              v-model="currentAnswer"
+              placeholder="Enter your answer..."
+              class="text-lg w-full"
+            />
+            <UTextarea
+              v-else
+              v-model="currentAnswer"
+              placeholder="Write your essay answer here..."
+              :rows="6"
+              class="text-base w-full"
+            />
             <UButton
-              @click="restartQuiz"
-              variant="outline"
-              class="flex items-center gap-2 bg-transparent"
+              @click="submitAnswer"
+              block
+              :disabled="!currentAnswer.trim()"
+              >Submit Answer</UButton
             >
-              <UIcon name="i-lucide-rotate-ccw" class="h-4 w-4" /> Retake Quiz
-            </UButton>
-            <UButton @click="exportResults" class="flex items-center gap-2">
-              <UIcon name="i-lucide-download" class="h-4 w-4" /> Export Results
-            </UButton>
-            <UButton @click="quizMode = false" variant="outline"
-              >Generate New Questions</UButton
+          </div>
+          <!-- Answer Feedback -->
+          <div v-else class="space-y-4">
+            <div class="p-4 border rounded-lg bg-muted/50">
+              <h4 class="font-semibold mb-2">Your Answer:</h4>
+              <p class="text-muted-foreground">{{ currentAnswer }}</p>
+            </div>
+            <div
+              v-if="currentQuestion.answer"
+              class="p-4 border rounded-lg bg-green-50 dark:bg-green-950/20"
             >
+              <h4 class="font-semibold mb-2 flex items-center gap-2">
+                <UIcon
+                  name="i-lucide-check-circle"
+                  class="h-4 w-4 text-green-600"
+                />
+                Correct Answer:
+              </h4>
+              <p class="text-green-700 dark:text-green-300">
+                {{ currentQuestion.answer }}
+              </p>
+            </div>
+            <div
+              v-if="currentQuestion.type !== 'essay'"
+              :class="[
+                'p-4 border rounded-lg',
+                userAnswers[userAnswers.length - 1]?.isCorrect
+                  ? 'bg-green-50 dark:bg-green-950/20'
+                  : 'bg-red-50 dark:bg-red-950/20',
+              ]"
+            >
+              <div class="flex items-center gap-2">
+                <UIcon
+                  :name="
+                    userAnswers[userAnswers.length - 1]?.isCorrect
+                      ? 'i-lucide-check-circle'
+                      : 'i-lucide-x-circle'
+                  "
+                  :class="[
+                    'h-5 w-5',
+                    userAnswers[userAnswers.length - 1]?.isCorrect
+                      ? 'text-green-600'
+                      : 'text-red-600',
+                  ]"
+                />
+                <span
+                  :class="[
+                    'font-semibold',
+                    userAnswers[userAnswers.length - 1]?.isCorrect
+                      ? 'text-green-700 dark:text-green-300'
+                      : 'text-red-700 dark:text-red-300',
+                  ]"
+                >
+                  {{
+                    userAnswers[userAnswers.length - 1]?.isCorrect
+                      ? "Correct!"
+                      : "Incorrect"
+                  }}
+                </span>
+              </div>
+            </div>
+            <!-- Navigation -->
+            <div class="flex justify-between">
+              <UButton
+                variant="outline"
+                @click="previousQuestion"
+                :disabled="currentQuestionIndex === 0"
+              >
+                <UIcon name="i-lucide-arrow-left" class="h-4 w-4 mr-2" />
+                Previous
+              </UButton>
+              <UButton @click="nextQuestion">
+                {{
+                  currentQuestionIndex === questions.length - 1
+                    ? "Finish Quiz"
+                    : "Next Question"
+                }}
+                <UIcon name="i-lucide-arrow-right" class="h-4 w-4 ml-2" />
+              </UButton>
+            </div>
           </div>
         </div>
       </UCard>
     </div>
+
+    <!-- Quiz Completed -->
+    <UCard v-if="quizCompleted">
+      <template #header>
+        <div class="text-center text-2xl font-semibold">Quiz Completed! 🎉</div>
+        <div class="text-center text-muted-foreground">
+          Here are your results
+        </div>
+      </template>
+      <div class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="text-center p-4 border rounded-lg">
+            <div class="text-3xl font-bold text-primary">
+              {{ correctAnswers }}
+            </div>
+            <p class="text-sm text-muted-foreground">Correct Answers</p>
+          </div>
+          <div class="text-center p-4 border rounded-lg">
+            <div class="text-3xl font-bold text-primary">
+              {{ totalAnswered }}
+            </div>
+            <p class="text-sm text-muted-foreground">Total Answered</p>
+          </div>
+          <div class="text-center p-4 border rounded-lg">
+            <div class="text-3xl font-bold text-primary">
+              {{
+                totalAnswered > 0
+                  ? Math.round((correctAnswers / totalAnswered) * 100)
+                  : 0
+              }}%
+            </div>
+            <p class="text-sm text-muted-foreground">Score</p>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <UButton
+            @click="restartQuiz"
+            variant="outline"
+            class="flex items-center gap-2 bg-transparent"
+          >
+            <UIcon name="i-lucide-rotate-ccw" class="h-4 w-4" /> Retake Quiz
+          </UButton>
+          <UButton @click="exportResults" class="flex items-center gap-2">
+            <UIcon name="i-lucide-download" class="h-4 w-4" /> Export Results
+          </UButton>
+          <UButton @click="quizMode = false" variant="outline"
+            >Generate New Questions</UButton
+          >
+        </div>
+      </div>
+    </UCard>
   </DashboardBodyLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useToast } from "#imports";
-
 definePageMeta({ layout: "dashboard" });
 
 interface GeneratedQuestion {
@@ -478,6 +434,7 @@ const generateQuestions = async () => {
     });
     return;
   }
+  const selectedFile = file.value;
   if (!formData.value.questionType || !formData.value.difficulty) {
     toast.add({
       title: "Missing Information",

@@ -20,6 +20,9 @@ defineProps({
       <template #actions>
         <slot name="actions" />
       </template>
+      <template #leading-icon>
+        <slot name="leading-icon" />
+      </template>
     </DashboardHeader>
     <slot />
   </div>
