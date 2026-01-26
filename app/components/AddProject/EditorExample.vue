@@ -11,7 +11,7 @@
         size="sm"
         aria-label="Undo"
         @click="applyFormat('undo')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-redo"
@@ -19,10 +19,10 @@
         size="sm"
         aria-label="Redo"
         @click="applyFormat('redo')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
 
-      <USeparator orientation="vertical" class="h-6 flex-shrink-0" />
+      <USeparator orientation="vertical" class="h-6 shrink-0" />
 
       <!-- Text Formatting -->
       <UButton
@@ -32,7 +32,7 @@
         size="sm"
         aria-label="Bold"
         @click="applyFormat('bold')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-italic"
@@ -41,7 +41,7 @@
         size="sm"
         aria-label="Italic"
         @click="applyFormat('italic')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-underline"
@@ -50,7 +50,7 @@
         size="sm"
         aria-label="Underline"
         @click="applyFormat('underline')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-strikethrough"
@@ -59,10 +59,10 @@
         size="sm"
         aria-label="Strikethrough"
         @click="applyFormat('strikethrough')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
 
-      <USeparator orientation="vertical" class="h-6 flex-shrink-0" />
+      <USeparator orientation="vertical" class="h-6 shrink-0" />
 
       <!-- Font Size -->
       <UDropdownMenu :items="fontSizeItems">
@@ -71,7 +71,7 @@
           variant="ghost"
           size="sm"
           aria-label="Font Size"
-          class="flex-shrink-0"
+          class="shrink-0"
         />
       </UDropdownMenu>
 
@@ -82,7 +82,7 @@
           variant="ghost"
           size="sm"
           aria-label="Headings"
-          class="flex-shrink-0"
+          class="shrink-0"
         />
       </UDropdownMenu>
 
@@ -94,7 +94,7 @@
         size="sm"
         aria-label="Bullet List"
         @click="applyFormat('insertUnorderedList')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-list-ordered"
@@ -103,10 +103,10 @@
         size="sm"
         aria-label="Ordered List"
         @click="applyFormat('insertOrderedList')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
 
-      <USeparator orientation="vertical" class="h-6 flex-shrink-0" />
+      <USeparator orientation="vertical" class="h-6 shrink-0" />
 
       <!-- Alignment -->
       <UButton
@@ -116,7 +116,7 @@
         size="sm"
         aria-label="Align Left"
         @click="applyFormat('justifyLeft')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-align-center"
@@ -125,7 +125,7 @@
         size="sm"
         aria-label="Align Center"
         @click="applyFormat('justifyCenter')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-align-right"
@@ -134,13 +134,13 @@
         size="sm"
         aria-label="Align Right"
         @click="applyFormat('justifyRight')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
 
-      <USeparator orientation="vertical" class="h-6 flex-shrink-0" />
+      <USeparator orientation="vertical" class="h-6 shrink-0" />
 
       <!-- Text Color -->
-      <div class="flex items-center flex-shrink-0">
+      <div class="flex items-center shrink-0">
         <input
           type="color"
           v-model="textColor"
@@ -151,7 +151,7 @@
       </div>
 
       <!-- Background Color -->
-      <div class="flex items-center flex-shrink-0">
+      <div class="flex items-center shrink-0">
         <input
           type="color"
           v-model="bgColor"
@@ -161,7 +161,7 @@
         />
       </div>
 
-      <USeparator orientation="vertical" class="h-6 flex-shrink-0" />
+      <USeparator orientation="vertical" class="h-6 shrink-0" />
 
       <!-- Quote & Code -->
       <UButton
@@ -170,7 +170,7 @@
         size="sm"
         aria-label="Quote"
         @click="applyFormat('formatBlock', '<blockquote>')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-code"
@@ -178,7 +178,7 @@
         size="sm"
         aria-label="Code Block"
         @click="insertCodeBlock"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
 
       <!-- Links & Media -->
@@ -188,7 +188,7 @@
         size="sm"
         aria-label="Insert Link"
         @click="insertLink"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
       <UButton
         icon="i-lucide-image"
@@ -196,10 +196,10 @@
         size="sm"
         aria-label="Insert Image"
         @click="insertImage"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
 
-      <USeparator orientation="vertical" class="h-6 flex-shrink-0" />
+      <USeparator orientation="vertical" class="h-6 shrink-0" />
 
       <!-- Horizontal Rule -->
       <UButton
@@ -208,7 +208,7 @@
         size="sm"
         aria-label="Horizontal Rule"
         @click="applyFormat('insertHorizontalRule')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
 
       <!-- Clear Format -->
@@ -218,7 +218,7 @@
         size="sm"
         aria-label="Clear Format"
         @click="applyFormat('removeFormat')"
-        class="flex-shrink-0"
+        class="shrink-0"
       />
     </div>
 

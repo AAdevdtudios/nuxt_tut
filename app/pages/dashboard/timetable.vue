@@ -7,11 +7,7 @@
       <UIcon name="i-lucide-calendar" class="h-8 w-8 text-primary" />
     </template>
     <template #actions>
-      <UButton
-        label="Generate New Timetable"
-        icon="i-lucide-plus"
-        color="primary"
-      />
+      <TimetableModal />
       <UButton label="Add Entry" icon="i-lucide-plus" variant="outline" />
     </template>
   </DashboardBodyLayout>

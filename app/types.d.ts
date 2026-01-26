@@ -74,3 +74,16 @@ export type ChatHistory = {
   timestamp: Date;
   messages: Message[];
 };
+
+export interface StepDefinition {
+  id: string;
+  label: string;
+  icon: string;
+  component: Component;
+  required?: boolean; // ⬅️ NEW (default: true)
+}
+
+export interface Step extends StepDefinition {
+  isComplete: boolean;
+  data: unknown; // ⬅️ NEW (step output)
+}

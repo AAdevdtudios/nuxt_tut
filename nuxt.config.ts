@@ -15,11 +15,17 @@ export default defineNuxtConfig({
     "dragon-editor",
     "nuxt-lottie",
     "@nuxtjs/i18n",
+    "@nuxtjs/device",
   ],
   runtimeConfig: {
     API_TOKEN_KEY: process.env.API_TOKEN_KEY,
     API_BASE_URL: process.env.API_BASE_URL,
   },
+  // nitro: {
+  //   prerender: {
+  //     crawlLinks: false,
+  //   },
+  // },
   lottie: {
     componentName: "Lottie", // Optional: Customize the component name
     lottieFolder: "/assets/lottie", // Optional: Customize the Lottie folder path

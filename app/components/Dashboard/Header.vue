@@ -1,5 +1,7 @@
 <template>
-  <div class="flex w-full items-center justify-between">
+  <div
+    class="flex flex-col lg:flex-row w-full gap-2 lg:gap-0 lg:items-center justify-between"
+  >
     <div>
       <div class="flex items-center gap-3">
         <slot name="leading-icon" />

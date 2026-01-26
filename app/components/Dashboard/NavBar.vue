@@ -25,11 +25,13 @@ const items = [
       />
       <UtilsNotifications />
       <UColorModeButton />
-      <UAvatar
-        :src="`https://i.pravatar.cc/150?u=${Math.random()}`"
-        size="md"
-        alt="User Avatar"
-      />
+      <ClientOnly>
+        <UAvatar
+          :src="`https://i.pravatar.cc/150?u=${Math.random()}`"
+          size="md"
+          alt="User Avatar"
+        />
+      </ClientOnly>
     </template>
   </UDashboardNavbar>
 </template>

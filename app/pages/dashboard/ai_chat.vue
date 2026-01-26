@@ -275,6 +275,7 @@
 
 <script setup lang="ts">
 import type { ChatHistory, LibrarySelection } from "~/types";
+import { useIsMobile } from "~/composable/useIsMobile";
 import {
   LazyAiChatHistorySlideOver,
   LazyAiChatLibraryDrawer,
@@ -334,23 +335,7 @@ const showLibrary = ref(false);
 const selectedContent = ref<any[]>([]);
 const showHistory = ref(false);
 const showMobileHistory = ref(false);
-const isMobile = ref(false);
-let media: MediaQueryList;
-
-onMounted(() => {
-  media = window.matchMedia("(max-width: 767px)");
-  isMobile.value = media.matches;
-
-  const handler = (e: MediaQueryListEvent) => {
-    isMobile.value = e.matches;
-  };
-
-  media.addEventListener("change", handler);
-
-  onUnmounted(() => {
-    media.removeEventListener("change", handler);
-  });
-});
+const { isMobile } = useIsMobile();
 
 const overlay = useOverlay();
 const mobileChatSlideOver = overlay.create(LazyAiChatHistorySlideOver);
@@ -410,7 +395,7 @@ const isSelected = (item: any) => {
 };
 const mobileLibraryDrawer = overlay.create(LazyAiChatLibraryDrawer);
 const handleLibraryToggle = async () => {
-  if (isMobile.value) {
+  if (isMobile) {
     await mobileLibraryDrawer.open({
       selected: selectedContent.value,
       items: libraryItems.value,
