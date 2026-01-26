@@ -1,7 +1,6 @@
 <template>
   <UModal
-    title=""
-    description=""
+    scrollable
     :ui="{
       content: 'px-5 py-5 max-w-5xl w-full',
     }"
@@ -13,6 +12,14 @@
     />
 
     <template #content>
+      <!-- DialogTitle (required for accessibility) -->
+      <UDialogTitle class="sr-only"> AI Timetable Generator </UDialogTitle>
+      <!-- DialogDescription (required for accessibility) -->
+      <UDialogDescription class="sr-only">
+        Configure your preferences and let AI create an optimized study schedule
+        for you.
+      </UDialogDescription>
+
       <!-- Header -->
       <div class="flex flex-col w-full p-0 lg:p-6">
         <div class="flex items-center gap-3">
@@ -27,43 +34,34 @@
         </p>
       </div>
       <!-- Tabs -->
-      <UTabs v-if="!isMobile" :items="steps" v-model="currentIndex" />
+      <UTabs
+        v-if="!isMobile"
+        :items="selectItems"
+        :model-value="currentIndex"
+        @update:model-value="(idx) => goTo(Number(idx))"
+        class="mt-2 mb-4"
+      />
 
       <!-- Mobile Select -->
       <USelect
         v-else
         :items="selectItems"
-        v-model="currentIndex"
+        :model-value="currentIndex"
+        @update:model-value="(idx) => goTo(Number(idx))"
         :icon="currentStep?.icon"
+        class="mt-2 mb-4"
       />
 
       <!-- Step Content -->
-      <component
-        :is="currentStep!.component"
-        v-model:isComplete="currentStep!.isComplete"
-        v-model:data="currentStep!.data"
-      />
-
-      <!-- Navigation -->
-      <div class="flex justify-between mt-6">
-        <UButton
-          label="Back"
-          variant="ghost"
-          :disabled="currentIndex === 0"
-          @click="goPrev"
-        />
-        <UButton
-          label="Next"
-          color="primary"
-          :disabled="!currentStep!.isComplete"
-          @click="goNext"
-        />
-
-        <UButton
-          v-if="currentIndex === steps.length - 1"
-          label="Generate Timetable"
-          color="primary"
-          @click="submit"
+      <div>
+        <component
+          :is="currentStep!.component"
+          v-model:isComplete="currentStep!.isComplete"
+          v-model:data="currentStep!.data"
+          :subjects="steps[0]?.data?.subjects ?? []"
+          :all-data="
+            steps.reduce((acc, step) => ({ ...acc, [step.id]: step.data }), {})
+          "
         />
       </div>
     </template>

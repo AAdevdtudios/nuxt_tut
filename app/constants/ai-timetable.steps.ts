@@ -5,7 +5,11 @@ import {
   TimetableStepsScheduleTab,
   TimetableStepsSubjectsTab,
 } from "#components";
-import type { StepDefinition } from "~/types";
+import type {
+  AITimetableInput,
+  AITimetableWizardState,
+  StepDefinition,
+} from "~/types";
 
 export const AI_TIMETABLE_STEPS = [
   {
@@ -37,3 +41,33 @@ export const AI_TIMETABLE_STEPS = [
     required: false, // ⬅️ OPTIONAL
   },
 ] satisfies readonly StepDefinition[];
+
+export const initialTimetableState: AITimetableWizardState = {
+  subjects: { data: null, completed: false },
+  schedule: { data: null, completed: false },
+  deadlines: { data: null, completed: false, optional: true },
+  preferences: {
+    data: null,
+    completed: true, // ⬅️ ALWAYS TRUE
+    optional: true,
+  },
+  review: { data: null, completed: false },
+};
+
+export function normalizeAITimetableInput(
+  state: AITimetableWizardState
+): AITimetableInput {
+  return {
+    subjects: state.subjects.data!,
+    schedule: {
+      hoursPerDay: state.schedule.data?.hoursPerDay ?? 6,
+      breakDurationMinutes: state.schedule.data?.breakDurationMinutes ?? 15,
+      studyStyle: state.schedule.data?.studyStyle ?? "balanced",
+      unavailableSlots: state.schedule.data?.unavailableSlots ?? [],
+    },
+    deadlines: state.deadlines.data ?? {
+      exams: [],
+      assignments: [],
+    },
+  };
+}

@@ -23,10 +23,6 @@ export function useStepper(steps: Step[]) {
   };
 
   const goTo = (index: number) => {
-    // cannot skip required incomplete steps
-    for (let i = 0; i < index; i++) {
-      if (steps[i]!.required && !steps[i]!.isComplete) return;
-    }
     currentIndex.value = index;
   };
 
