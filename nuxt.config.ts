@@ -16,7 +16,11 @@ export default defineNuxtConfig({
     "nuxt-lottie",
     "@nuxtjs/i18n",
     "@nuxtjs/device",
+    "nuxt-tiptap-editor",
   ],
+  tiptap: {
+    prefix: "Tiptap", //prefix for Tiptap imports, composables not included
+  },
   runtimeConfig: {
     API_TOKEN_KEY: process.env.API_TOKEN_KEY,
     API_BASE_URL: process.env.API_BASE_URL,

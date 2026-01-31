@@ -152,7 +152,10 @@
             </div>
           </div>
 
-          <UButton variant="outline" class="w-full justify-center mt-6"
+          <UButton
+            variant="outline"
+            class="w-full justify-center mt-6"
+            :to="`/dashboard/projects/${project.id}`"
             >View Project</UButton
           >
         </div>

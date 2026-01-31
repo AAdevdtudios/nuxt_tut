@@ -15,7 +15,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-2 md:space-y-4">
     <DashboardHeader :title="title" :description="description">
       <template #actions>
         <slot name="actions" />

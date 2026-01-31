@@ -395,7 +395,7 @@ const isSelected = (item: any) => {
 };
 const mobileLibraryDrawer = overlay.create(LazyAiChatLibraryDrawer);
 const handleLibraryToggle = async () => {
-  if (isMobile) {
+  if (isMobile.value) {
     await mobileLibraryDrawer.open({
       selected: selectedContent.value,
       items: libraryItems.value,

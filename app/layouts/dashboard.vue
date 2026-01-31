@@ -1,7 +1,11 @@
 <template>
   <UDashboardGroup layout="sidebar">
     <DashboardSidebar />
-    <UDashboardPanel>
+    <UDashboardPanel
+      :ui="{
+        body: 'p-0 md:p-6',
+      }"
+    >
       <template #header>
         <DashboardNavBar />
       </template>
