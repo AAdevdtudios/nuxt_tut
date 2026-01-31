@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { EditorToolbarItem } from "@nuxt/ui";
-import { TextAlign } from "@tiptap/extension-text-align";
-
 const value =
   ref(`This toolbar showcases **all available formatting options** using built-in handlers. Try the different controls to see them in action!
 
@@ -180,12 +178,12 @@ definePageMeta({
     v-slot="{ editor }"
     v-model="value"
     content-type="markdown"
-    :extensions="[TextAlign.configure({ types: ['heading', 'paragraph'] })]"
     class="w-full min-h-37 flex flex-col gap-4"
   >
     <UEditorToolbar
       :editor="editor"
       :items="items"
+      size="lg"
       class="sm:px-8 overflow-x-auto"
     />
   </UEditor>
