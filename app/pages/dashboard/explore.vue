@@ -139,6 +139,7 @@
             <UPagination
               v-model:page="page"
               :total="total"
+              :itemsPerPage="pageSize"
               active-color="primary"
               active-variant="subtle"
             />
@@ -151,31 +152,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
+import type { Category, Explore } from "~/types/explore.types";
 
 definePageMeta({
   layout: "dashboard",
 });
-
-interface Category {
-  id: number;
-  documentId: string;
-  name: string;
-  slug: string;
-  description: string | null;
-}
-
-interface Explore {
-  id: number;
-  documentId: string;
-  Title: string;
-  Description: string;
-  Downloads: string;
-  Copyright: string;
-  url: string;
-  slug: string;
-  Language: string;
-  Author: string;
-}
 
 const searchQuery = ref("");
 const selectedCategory = ref("all");
@@ -184,11 +165,12 @@ const explores = ref<Explore[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const toast = useToast();
-const pageSizes = [5, 10, 20, 50];
+const pageSizes = [3, 5, 10, 20, 50];
 // Pagination state
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
+const pageCount = ref(1);
 
 // Fetch categories from API endpoint
 const fetchCategories = async () => {
@@ -250,6 +232,7 @@ const fetchExplores = async () => {
     if (response.success) {
       explores.value = response.data.items || [];
       total.value = response.data.pagination?.total || 0;
+      pageCount.value = response.data.pagination?.pageCount || 1;
     } else {
       throw new Error("Failed to load explores");
     }
