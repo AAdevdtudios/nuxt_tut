@@ -17,7 +17,7 @@
 </template>
 
 <script lang="ts" setup>
-import { type LibraryItem, type LibraryTypeValue } from "~/types";
+// No imports needed - types are defined globally in types.d.ts
 
 // No additional script logic needed for this simple library page
 definePageMeta({

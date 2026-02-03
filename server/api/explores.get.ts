@@ -33,7 +33,6 @@ export default defineEventHandler(async (event) => {
       method: "GET",
       useJwt: true,
     });
-    console.log(data);
 
     // Custom response structure
     return {

@@ -1,20 +1,11 @@
+import { getQuery, createError } from "h3";
+import { useApi } from "../utils/api";
+
 export default defineEventHandler(async (event) => {
   try {
-    // Get JWT from Authorization header
-    const authHeader = getHeader(event, "authorization");
-    if (!authHeader) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: "Unauthorized - Missing token",
-      });
-    }
-
-    const data = await $fetch("http://localhost:1337/api/categories", {
+    const data = await useApi<any>(event, "/categories", {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-      },
+      useJwt: true,
     });
 
     return {
