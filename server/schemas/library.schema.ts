@@ -120,7 +120,7 @@ export const UploadedFileSchema = z.object({
   caption: z.string().nullable().optional(),
   width: z.number().nullable().optional(),
   height: z.number().nullable().optional(),
-  formats: z.record(z.any()).nullable().optional(),
+  formats: z.record(z.string(), z.any()).nullable().optional(),
   hash: z.string(),
   ext: z.string(),
   mime: z.string(),

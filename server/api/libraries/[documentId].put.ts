@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
         ...(validated.libraryType && { libraryType: validated.libraryType }),
         ...(validated.url !== undefined && { url: validated.url }),
         ...(validated.content !== undefined && { content: validated.content }),
-        ...(validated.doc !== undefined && { doc: validated.doc }),
+        ...(validated.docID !== undefined && { docID: validated.docID }),
       },
     };
 

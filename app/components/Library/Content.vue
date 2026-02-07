@@ -48,10 +48,15 @@
       <label class="text-sm font-medium text-foreground">
         Items per page:
         <USelect
-          :model-value="pageSize"
-          :options="pageSizeOptions"
+          :modelValue="pageSize"
+          :items="
+            pageSizeOptions.map((size) => ({
+              label: size.toString(),
+              value: size,
+            }))
+          "
           class="ml-2 inline-block w-20"
-          @update:model-value="$emit('update:page-size', pageSize)"
+          @update:modelValue="$emit('update:page-size', $event)"
         />
       </label>
       <p class="text-sm text-muted-foreground">
@@ -59,7 +64,6 @@
         {{ Math.min(currentPage * pageSize, total) }} of {{ total }}
       </p>
     </div>
-
     <UPagination
       v-model="currentPageModel"
       :page-count="pageSize"

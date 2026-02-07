@@ -39,6 +39,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useExplore } from "~/composables/useExplore";
+import { usePaginationHandlers } from "~/composables/usePaginationHandlers";
 
 // Imports for components
 import SearchBar from "~/components/Explore/SearchBar.vue";
@@ -63,25 +64,11 @@ const explore = useExplore({
   },
 });
 
-/**
- * Update current page
- * @param newPage - New page number
- */
-const updatePage = (newPage: number): void => {
-  explore.page.value = newPage;
-};
-
-/**
- * Update page size and reset to first page
- * @param newPageSize - New page size
- */
-const updatePageSize = (newPageSize: number): void => {
-  console.log(newPageSize);
-
-  explore.pageSize.value = newPageSize;
-  explore.page.value = 1;
-  explore.fetchExplores();
-};
+// Initialize pagination handlers
+const { updatePage, updatePageSize } = usePaginationHandlers(
+  { page: explore.page, pageSize: explore.pageSize },
+  () => explore.fetchExplores(),
+);
 
 // Initialize on mount
 onMounted(async () => {

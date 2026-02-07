@@ -39,9 +39,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted } from "vue";
 import { useLibrary } from "~/composables/useLibrary";
 import { useLibraryPreferencesStore } from "~/stores/libraryPreferences";
+import { usePaginationHandlers } from "~/composables/usePaginationHandlers";
 
 definePageMeta({
   layout: "dashboard",
@@ -82,23 +83,11 @@ const viewMode = computed({
   set: (value: "grid" | "list") => preferencesStore.setViewMode(value),
 });
 
-/**
- * Update current page
- * @param newPage - New page number
- */
-const updatePage = (newPage: number): void => {
-  library.page.value = newPage;
-};
-
-/**
- * Update page size and reset to first page
- * @param newPageSize - New page size
- */
-const updatePageSize = (newPageSize: number): void => {
-  library.pageSize.value = newPageSize;
-  library.page.value = 1;
-  library.fetchLibraries();
-};
+// Initialize pagination handlers
+const { updatePage, updatePageSize } = usePaginationHandlers(
+  { page: library.page, pageSize: library.pageSize },
+  () => library.fetchLibraries(),
+);
 
 /**
  * Delete library item
