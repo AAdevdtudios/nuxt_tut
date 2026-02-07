@@ -5,7 +5,7 @@
       placeholder="Search for topics, courses, or materials..."
       icon="i-lucide-search"
       class="w-full"
-      @update:model-value="$emit('update:value', $event)"
+      @update:model-value="$emit('update:value', value)"
     />
   </div>
 </template>

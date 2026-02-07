@@ -8,13 +8,22 @@ export const useApi = async <T>(
     method?: "GET" | "POST" | "PUT" | "DELETE";
     body?: any;
     useJwt?: boolean;
-  } = {}
+    skipContentType?: boolean;
+  } = {},
 ): Promise<T> => {
-  const { method = "GET", body, useJwt = true } = options;
+  const {
+    method = "GET",
+    body,
+    useJwt = true,
+    skipContentType = false,
+  } = options;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
+
+  // Only set Content-Type if not FormData and not explicitly skipped
+  if (!skipContentType && !(body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (useJwt) {
     const token = getCookie(event, "access_token");

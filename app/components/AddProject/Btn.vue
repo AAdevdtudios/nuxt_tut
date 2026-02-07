@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import type { LibraryType, LibraryCreateRequest } from "~/types";
 
 interface FormData {
   title: string;
@@ -11,12 +12,37 @@ interface FormData {
 const isOpen = ref(false);
 const selectedType = ref<string | null>(null);
 const step = ref<"select" | "form" | "success">("select");
+const isSubmitting = ref(false);
 const formData = ref<FormData>({
   title: "",
   url: "",
   file: null,
   notes: "",
 });
+
+// Initialize composables
+const toast = useToast();
+const library = useLibrary({
+  onError: (error: string, details?: string[]) => {
+    toast.add({
+      title: "Error",
+      description: error,
+      color: "error",
+    });
+    if (details?.length) {
+      console.warn("Validation errors:", details);
+    }
+  },
+  onSuccess: (message: string) => {
+    toast.add({
+      title: "Success",
+      description: message,
+      color: "success",
+    });
+  },
+});
+
+const validation = useLibraryValidation();
 
 const contentTypes = [
   {
@@ -57,22 +83,103 @@ const handleBtnSelect = (type: string) => {
   step.value = "form";
 };
 
-const handleSubmit = () => {
-  step.value = "success";
-  setTimeout(() => {
-    isOpen.value = false;
-    step.value = "select";
-    selectedType.value = null;
-    formData.value = { title: "", url: "", file: null, notes: "" };
-  }, 1500);
+const handleSubmit = async () => {
+  isSubmitting.value = true;
+
+  try {
+    // Prepare library creation request
+    const libraryType = mapTypeToLibraryType(selectedType.value);
+
+    // Build request payload
+    const payload: LibraryCreateRequest = {
+      title: formData.value.title.trim(),
+      libraryType,
+    };
+
+    // Validate on client-side first
+    if (!validation.validateCreate(payload)) {
+      validation.errors.value.forEach((err) => {
+        toast.add({
+          title: "Validation Error",
+          description: `${err.field}: ${err.message}`,
+          color: "error",
+        });
+      });
+      isSubmitting.value = false;
+      return;
+    }
+
+    // Handle type-specific data
+    if (selectedType.value === "document" && formData.value.file) {
+      // Upload document first
+      const fileId = await library.uploadFile(formData.value.file);
+      payload.docID = fileId;
+    } else if (selectedType.value === "website") {
+      // Validate URL format
+      try {
+        new URL(formData.value.url);
+        payload.url = formData.value.url;
+      } catch {
+        toast.add({
+          title: "Validation Error",
+          description: "Please enter a valid URL",
+          color: "error",
+        });
+        isSubmitting.value = false;
+        return;
+      }
+    } else if (selectedType.value === "note") {
+      // Store note content
+      payload.content = formData.value.notes;
+    }
+
+    // Create library item via API
+    await library.createLibrary(payload);
+
+    // Success - show success step
+    step.value = "success";
+    setTimeout(() => {
+      isOpen.value = false;
+      resetForm();
+    }, 1500);
+  } catch (error) {
+    console.error("Failed to create library:", error);
+    // Error is already handled by composable's onError callback
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+/**
+ * Maps form type selection to library type enum
+ */
+const mapTypeToLibraryType = (type: string | null): LibraryType => {
+  switch (type) {
+    case "document":
+      return "doc";
+    case "website":
+      return "url";
+    case "note":
+      return "note";
+    default:
+      return "note";
+  }
+};
+
+/**
+ * Reset form to initial state
+ */
+const resetForm = () => {
+  step.value = "select";
+  selectedType.value = null;
+  formData.value = { title: "", url: "", file: null, notes: "" };
+  validation.clearErrors();
 };
 
 const handleClose = () => {
   isOpen.value = false;
   setTimeout(() => {
-    step.value = "select";
-    selectedType.value = null;
-    formData.value = { title: "", url: "", file: null, notes: "" };
+    resetForm();
   }, 200);
 };
 </script>
@@ -142,44 +249,67 @@ const handleClose = () => {
         v-if="step === 'form'"
         class="space-y-4 w-full items-center flex flex-col"
       >
-        <!-- Document Upload -->
-        <UFormField label="Title" class="w-full">
-          <UInput
-            v-model="formData.title"
-            class="w-full"
-            placeholder="Enter title..."
-          />
-        </UFormField>
+        <!-- Title Input -->
+        <div class="w-full">
+          <UFormField label="Title" :error="validation.getFieldError('title')">
+            <UInput
+              v-model="formData.title"
+              class="w-full"
+              placeholder="Enter title..."
+              :ui="{
+                base: validation.hasFieldError('title') ? 'border-red-500' : '',
+              }"
+            />
+          </UFormField>
+        </div>
 
         <!-- Document Upload -->
         <div v-if="selectedType === 'document'" class="w-full">
           <UFormField label="Upload File">
             <UFileUpload
+              v-model="formData.file"
               color="neutral"
               highlight
-              label="Drop your image here"
-              description="SVG, PNG, JPG or GIF (max. 2MB)"
+              label="Drop your file here"
+              description="PDF, DOCX, TXT or other files (max. 1`0MB)"
               class="w-full min-h-48"
+              @change="
+                (event) => {
+                  console.log(event);
+                }
+              "
             />
+            <p v-if="formData.file" class="mt-2 text-sm text-muted-foreground">
+              Selected: {{ formData.file.name }}
+            </p>
           </UFormField>
         </div>
 
         <!-- Website -->
         <div v-if="selectedType === 'website'" class="w-full">
-          <UFormField label="Website Url">
+          <UFormField
+            label="Website URL"
+            :error="validation.getFieldError('url')"
+          >
             <UInput
               v-model="formData.url"
               type="url"
               placeholder="https://example.com/article"
               class="w-full"
+              :ui="{
+                base: validation.hasFieldError('url') ? 'border-red-500' : '',
+              }"
             />
           </UFormField>
         </div>
 
         <!-- Note -->
         <div v-if="selectedType === 'note'" class="w-full">
-          <UFormField label="Your Note">
-            <AddProjectEditorExample />
+          <UFormField
+            label="Your Note"
+            :error="validation.getFieldError('content')"
+          >
+            <AddProjectEditorExample v-model="formData.notes" />
           </UFormField>
         </div>
 
@@ -196,9 +326,20 @@ const handleClose = () => {
         </div>
 
         <div class="flex justify-end gap-3">
-          <UButton @click="step = 'select'" variant="outline"> Back </UButton>
-          <UButton @click="handleSubmit" color="primary">
-            Add to Library
+          <UButton
+            @click="step = 'select'"
+            variant="outline"
+            :disabled="isSubmitting"
+          >
+            Back
+          </UButton>
+          <UButton
+            @click="handleSubmit"
+            color="primary"
+            :loading="isSubmitting"
+            :disabled="!formData.title.trim() || isSubmitting"
+          >
+            {{ isSubmitting ? "Adding to Library..." : "Add to Library" }}
           </UButton>
         </div>
       </div>

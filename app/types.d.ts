@@ -15,6 +15,7 @@ export interface User {
     type: string;
   };
 }
+
 export interface ApiError {
   status: number;
   name: string;
@@ -24,7 +25,24 @@ export interface ApiError {
   };
 }
 
-export interface LibraryListResponse {
+// Library Types - Aligned with Zod schemas and Strapi CMS
+export type LibraryType = "url" | "doc" | "note";
+
+export interface LibraryItem {
+  id: number;
+  documentId: string;
+  title: string;
+  url?: string | null;
+  content?: string | null;
+  docID?: string | number | null;
+  libraryType: LibraryType;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string | null;
+  libUUID?: string;
+}
+
+export interface LibrariesResponse {
   data: LibraryItem[];
   meta: {
     pagination: {
@@ -36,36 +54,68 @@ export interface LibraryListResponse {
   };
 }
 
-export interface LibraryItem {
-  id: number;
-  title: string;
-  type: LibraryTypeValue;
-  size: number;
-  content: string;
-  // createdAt: string;
-  // updatedAt: string;
+export interface LibrarySingleResponse {
+  data: LibraryItem;
 }
 
+export interface LibraryCreateRequest {
+  title: string;
+  libraryType: LibraryType;
+  url?: string | null;
+  content?: string | null;
+  docID?: string | number | null;
+  libUUID?: string;
+  locale?: string;
+}
+
+export interface LibraryUpdateRequest {
+  title?: string;
+  libraryType?: LibraryType;
+  url?: string | null;
+  content?: string | null;
+  docID?: string | number | null;
+}
+
+export interface UploadedFile {
+  id: number;
+  name: string;
+  alternativeText?: string | null;
+  caption?: string | null;
+  width?: number | null;
+  height?: number | null;
+  hash: string;
+  ext: string;
+  mime: string;
+  size: number;
+  url: string;
+  previewUrl?: string | null;
+  provider: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type UploadResponse = UploadedFile[];
+
+// Legacy library types (deprecated, use LibraryType instead)
 export interface LibrarySelection {
   id: number;
   title: string;
   type: LibraryTypeValue;
 }
 
-export interface LibraryType {
+export interface LibraryTypeOption {
   label: string;
   value: string;
 }
-export const libraryTypes = [
+
+export const libraryTypeOptions = [
   { label: "All", value: "all" },
-  { label: "PDF", value: "pdf" },
-  { label: "DOCX", value: "docx" },
-  { label: "TXT", value: "txt" },
-  { label: "Website", value: "website" },
-  { label: "Note", value: "note" },
-  { label: "AI Generated", value: "ai_generated" },
+  { label: "Documents", value: "doc" },
+  { label: "Links", value: "url" },
+  { label: "Notes", value: "note" },
 ] as const;
-export type LibraryTypeValue = (typeof libraryTypes)[number]["value"];
+
+export type LibraryTypeValue = (typeof libraryTypeOptions)[number]["value"];
 
 export type ChatHistory = {
   id: number;

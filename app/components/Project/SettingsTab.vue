@@ -235,7 +235,7 @@ const handleSaveSettings = () => {
   toast.add({
     title: "Success",
     description: "Project settings saved successfully",
-    color: "green",
+    color: "error",
   });
   // Handle actual save logic here
 };
@@ -244,7 +244,7 @@ const handleDeleteProject = () => {
   toast.add({
     title: "Project Deleted",
     description: "The project has been permanently deleted",
-    color: "red",
+    color: "error",
   });
   showDeleteConfirm.value = false;
   // Navigate away or handle deletion

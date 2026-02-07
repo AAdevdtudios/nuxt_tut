@@ -11,10 +11,10 @@
         @input="onInput"
       />
       <USelect
-        v-model="localValue"
-        :items="documentType"
+        v-model="localLibraryType"
+        :items="libraryTypes"
         class="px-7 max-w-md"
-        @change="emit('update:value', localValue)"
+        @change="emit('update:libraryType', localLibraryType)"
       />
     </UFieldGroup>
     <UFieldGroup>
@@ -39,26 +39,27 @@
 <script lang="ts" setup>
 import type { SelectItem } from "@nuxt/ui";
 
-const emit = defineEmits(["update:searchQuery", "update:value", "changeView"]);
-const props = defineProps({
-  searchQuery: String,
-  value: String,
-  viewMode: {
-    type: String,
-    default: "grid",
-  },
-});
+const emit = defineEmits<{
+  "update:searchQuery": [value: string];
+  "update:libraryType": [value: string];
+  changeView: [value: "list" | "grid"];
+}>();
 
-const documentType = ref<SelectItem[]>([
+const props = defineProps<{
+  searchQuery?: string;
+  libraryType?: string;
+  viewMode?: "list" | "grid";
+}>();
+
+const libraryTypes = ref<SelectItem[]>([
   { label: "All", value: "all" },
-  { label: "PDF", value: "pdf" },
-  { label: "DOCX", value: "docx" },
-  { label: "TXT", value: "txt" },
-  { label: "Website", value: "website" },
-  { label: "AI Generated", value: "ai_generated" },
+  { label: "Documents", value: "doc" },
+  { label: "Links", value: "url" },
+  { label: "Notes", value: "note" },
 ]);
+
 const localSearchQuery = ref(props.searchQuery ?? "");
-const localValue = ref(props.value ?? "All");
+const localLibraryType = ref(props.libraryType ?? "all");
 const searchLoading = ref(false);
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -76,17 +77,17 @@ watch(
   () => props.searchQuery,
   (val) => {
     if (val !== localSearchQuery.value) localSearchQuery.value = val || "";
-  }
+  },
 );
 watch(
-  () => props.value,
+  () => props.libraryType,
   (val) => {
-    if (val !== localValue.value) localValue.value = val || "All";
-  }
+    if (val !== localLibraryType.value) localLibraryType.value = val || "all";
+  },
 );
 
 const viewMode = computed({
-  get: () => props.viewMode,
+  get: () => props.viewMode || "grid",
   set: (val: "list" | "grid") => emit("changeView", val),
 });
 
