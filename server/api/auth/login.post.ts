@@ -24,6 +24,8 @@ export default defineEventHandler(async (event) => {
 
     return response;
   } catch (error) {
+    console.log(error);
+
     throw createError({
       statusCode: 400,
       statusMessage: "Login failed",

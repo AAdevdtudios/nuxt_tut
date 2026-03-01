@@ -86,9 +86,9 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     await auth.register(payload.data);
     toast.add({
       title: "Success",
-      description: "Logged in successfully",
+      description: "Account created successfully",
     });
-    await navigateTo("/");
+    await navigateTo("/auth/login");
   } catch (error: any) {
     errorMessage.value =
       error?.message || "Registration failed. Please try again.";

@@ -128,7 +128,7 @@ export const UploadedFileSchema = z.object({
   url: z.string(),
   previewUrl: z.string().nullable().optional(),
   provider: z.string(),
-  provider_metadata: z.record(z.any()).nullable().optional(),
+  provider_metadata: z.record(z.string(), z.any()).nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

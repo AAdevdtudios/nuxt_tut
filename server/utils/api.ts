@@ -34,6 +34,7 @@ export const useApi = async <T>(
 
   const config = useRuntimeConfig();
   const baseUrl = config.API_BASE_URL;
+  console.log(baseUrl);
 
   try {
     return (await $fetch<T>(`${baseUrl}${path}`, {
@@ -45,6 +46,8 @@ export const useApi = async <T>(
     /**
      * Normalize ALL upstream errors
      */
+    console.log(error);
+
     throw createError({
       statusCode: error?.response?.status || 500,
       statusMessage:

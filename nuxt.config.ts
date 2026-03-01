@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import path from "path";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -38,6 +39,11 @@ export default defineNuxtConfig({
   },
   css: ["~/assets/css/main.css"],
   vite: {
+    resolve: {
+      alias: {
+        "~": path.resolve(__dirname, "app"),
+      },
+    },
     plugins: [tailwindcss()],
   },
 });

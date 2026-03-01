@@ -6,6 +6,7 @@ import {
   ProjectPracticeTab,
   ProjectSettingsTab,
 } from "#components";
+import type { ProjectIcon } from "~/types/project.types";
 
 export const PROJECT_TABS = [
   {
@@ -45,3 +46,14 @@ export const PROJECT_TABS = [
     value: "settings",
   },
 ];
+
+export const ICONS: Record<ProjectIcon, string> = {
+  "graduation-cap": "i-lucide-graduation-cap",
+  "file-text": "i-lucide-file-text",
+  atom: "i-lucide-atom",
+  presentation: "i-lucide-presentation",
+  "book-open": "i-lucide-book-open",
+  folder: "i-lucide-folder",
+  target: "i-lucide-target",
+  sparkles: "i-lucide-sparkles",
+};

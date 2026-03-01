@@ -10,17 +10,33 @@
           icon="i-lucide-arrow-left"
         />
         <div
-          class="bg-primary p-1 md:p-3 rounded-lg items-center justify-center flex"
+          class="p-1 md:p-3 rounded-lg items-center justify-center flex"
+          :class="projectWithMetadata?.colorClass"
         >
-          <UIcon name="i-lucide-history" class="h-6 w-6 text-white" />
+          <UIcon
+            :name="
+              projectService.getIconName(
+                projectWithMetadata?.icons as ProjectIcon,
+              ) || 'i-lucide-folder'
+            "
+            class="h-6 w-6 text-white"
+          />
         </div>
         <div>
           <h2 class="text-2xl md:text-3xl font-bold text-foreground">
-            Subject Topic
+            {{ projectWithMetadata?.title || "Project" }}
           </h2>
-          <p class="text-xs md:text-lg text-muted">
-            Comprehensive preparation for end of semester examinations covering
-            all major subjects
+          <p
+            class="text-xs md:text-base text-muted max-w-md overflow-hidden text-ellipsis whitespace-nowrap"
+            :title="
+              projectWithMetadata?.description || 'No description provided.'
+            "
+          >
+            {{
+              (projectWithMetadata?.description ?? "").length > 100
+                ? (projectWithMetadata?.description ?? "").slice(0, 100) + "..."
+                : projectWithMetadata?.description || "No description provided."
+            }}
           </p>
         </div>
       </div>
@@ -30,11 +46,13 @@
             name="i-lucide-calendar"
             class="h-4 w-4 text-muted-foreground"
           />
-          <span>Due Apr 15, 2024</span>
+          <span>
+            Due {{ projectWithMetadata?.formattedDueDate || "N/A" }}
+          </span>
         </div>
         <div class="flex items-center gap-2 px-4 py-2">
           <UIcon name="i-lucide-target" class="h-4 w-4 text-muted-foreground" />
-          <span>65% complete</span>
+          <span> {{ projectWithMetadata?.progress ?? 0 }}% complete </span>
         </div>
       </div>
     </div>
@@ -44,6 +62,7 @@
       @update:model-value="getCurrentTab"
       :items="PROJECT_TABS"
       class="mb-3 mt-2"
+      :ui="tabUi"
     />
     <USelect
       v-else
@@ -62,11 +81,31 @@
 import { useIsMobile } from "~/composable/useIsMobile";
 import { PROJECT_TABS } from "~/constants/projects.const";
 const { isMobile } = useIsMobile();
+import { useRoute } from "vue-router";
+import { useStoreInitializer } from "~/composables/useStoreInitializer";
+import { useProjectRelationships } from "~/composables/useProjectRelationships";
+import { ProjectService } from "~/services/projectService";
+import type { ProjectIcon } from "~/types/project.types";
 
 var currentTab = ref("overview");
+const route = useRoute();
+const documentId = route.params.id as string;
+const { initialize } = useStoreInitializer();
+const projectService = new ProjectService();
+
+await initialize();
+
+const { projectWithMetadata } = useProjectRelationships(documentId);
 const icon = computed(
-  () => PROJECT_TABS.find((item) => item.value === currentTab.value)?.icon
+  () => PROJECT_TABS.find((item) => item.value === currentTab.value)?.icon,
 );
+
+const tabUi = computed(() => {
+  const colorClass = projectWithMetadata?.value?.colorClass || "";
+  return {
+    indicator: `${colorClass}`,
+  };
+});
 
 function getCurrentTab(val: string | number) {
   currentTab.value = String(val);

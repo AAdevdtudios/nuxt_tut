@@ -4,160 +4,163 @@
     description="Organize your study materials into focused projects"
   >
     <template #actions>
-      <UModal title="Create New Project" v-model="isCreating">
-        <UButton
-          label="New Project"
-          icon="i-lucide-plus"
-          color="primary"
-          @click="isCreating = true"
-        />
-        <template #body>
-          <div class="flex flex-col gap-4 p-4">
-            <UInput
-              v-model="newProjectName"
-              placeholder="Project Title"
-              class="border border-default"
-              autofocus
-            />
-            <UTextarea
-              v-model="newProjectDescription"
-              placeholder="Project Description"
-              class="border border-default"
-              :rows="3"
-            />
-            <div class="flex gap-4">
-              <USelect
-                v-model="newProjectIcon"
-                :items="iconOptions"
-                placeholder="Select Icon"
-                class="border border-default w-1/2"
-                option-variant="icon"
-              />
-              <USelect
-                v-model="newProjectColor"
-                :items="colorOptions"
-                placeholder="Color"
-                class="border border-default w-1/2"
-              />
-            </div>
-            <div>
-              <UPopover>
-                <UButton
-                  color="neutral"
-                  variant="subtle"
-                  icon="i-lucide-calendar"
-                  class="w-full justify-start"
-                >
-                  <template v-if="newProjectDateRange.start">
-                    <template v-if="newProjectDateRange.end">
-                      {{
-                        df.format(
-                          newProjectDateRange.start.toDate(getLocalTimeZone())
-                        )
-                      }}
-                      -
-                      {{
-                        df.format(
-                          newProjectDateRange.end.toDate(getLocalTimeZone())
-                        )
-                      }}
-                    </template>
-                    <template v-else>
-                      {{
-                        df.format(
-                          newProjectDateRange.start.toDate(getLocalTimeZone())
-                        )
-                      }}
-                    </template>
-                  </template>
-                  <template v-else> Pick a date range </template>
-                </UButton>
-                <template #content>
-                  <UCalendar
-                    v-model="newProjectDateRange"
-                    class="p-2"
-                    :number-of-months="2"
-                    range
-                  />
-                </template>
-              </UPopover>
-            </div>
-            <div class="flex gap-2 mt-4">
-              <UButton color="primary" @click="createProject">Create</UButton>
-              <UButton variant="outline" @click="isCreating = false"
-                >Cancel</UButton
-              >
-            </div>
-          </div>
-        </template>
-      </UModal>
+      <ProjectAddBtn
+        :model-value="isCreating"
+        @update:modelValue="isCreating = $event"
+        @create-project="handleCreateProject"
+      />
     </template>
+
     <div class="space-y-6">
+      <!-- Loading State -->
+      <div v-if="projectStore.isLoading" class="text-center py-12">
+        <div class="inline-flex items-center gap-2">
+          <UIcon name="i-lucide-loader" class="h-5 w-5 animate-spin" />
+          <span>Loading projects...</span>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div
+        v-else-if="projectStore.error"
+        class="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive"
+      >
+        <p class="font-medium">Error loading projects</p>
+        <p class="text-sm">{{ projectStore.error }}</p>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-else-if="projectStore.isEmpty"
+        class="rounded-lg border-2 border-dashed border-muted-foreground/25 p-12 text-center"
+      >
+        <UIcon
+          name="i-lucide-folder-open"
+          class="h-12 w-12 mx-auto mb-4 text-muted-foreground"
+        />
+        <p class="text-lg font-medium">No projects yet</p>
+        <p class="text-sm text-muted-foreground mt-1">
+          Create your first project to get started
+        </p>
+      </div>
+
       <!-- Projects Grid -->
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div
-          v-for="project in projects"
-          :key="project.id"
-          class="rounded-lg border border-default bg-card p-6 hover:border-primary"
+          v-for="project in formattedProjects"
+          :key="project.documentId"
+          class="rounded-lg border border-default bg-card p-6 hover:border-primary hover:shadow-lg transition-all"
         >
+          <!-- Header -->
           <div class="flex items-start justify-between">
             <div
-              :class="`flex h-12 w-12 items-center justify-center rounded-lg ${project.color} text-white`"
+              :class="[
+                `flex h-12 w-12 items-center justify-center rounded-lg text-white`,
+                project.colorClass,
+              ]"
             >
-              <UIcon name="i-lucide-folder-kanban" class="h-6 w-6" />
+              <UIcon
+                :name="projectService.getIconName(project.icons)"
+                class="h-6 w-6"
+              />
             </div>
             <div class="flex items-center gap-1">
-              <UButton icon="i-lucide-edit" variant="ghost" size="xs" />
+              <UButton
+                icon="i-lucide-edit"
+                variant="ghost"
+                size="xs"
+                :to="`/dashboard/projects/${project.documentId}`"
+              />
               <UButton
                 icon="i-lucide-trash-2"
                 variant="ghost"
                 size="xs"
                 color="error"
-                @click="deleteProject(project.id)"
+                @click="handleDeleteProject(project.documentId)"
               />
             </div>
           </div>
 
+          <!-- Title and Description -->
           <h3 class="mt-4 text-lg font-semibold text-card-foreground">
-            {{ project.name }}
+            {{ project.title }}
           </h3>
           <p class="mt-1 text-sm text-muted-foreground line-clamp-2">
-            {{ project.description }}
+            {{ project.description || "No description" }}
           </p>
 
+          <!-- Project Info -->
           <div class="mt-4 space-y-3">
-            <div class="flex items-center gap-2 text-sm text-muted-foreground">
-              <UIcon name="i-lucide-check-circle-2" class="h-4 w-4" />
-              <span>{{ project.items }} items</span>
-            </div>
+            <!-- Date Range -->
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
               <UIcon name="i-lucide-calendar" class="h-4 w-4" />
-              <span>Due {{ project.dueDate }}</span>
+              <span>{{ project.formattedDueDate }}</span>
+            </div>
+
+            <!-- Status Badge -->
+            <div class="flex items-center gap-2">
+              <div
+                :class="[
+                  'text-xs font-medium px-2 py-1 rounded-full',
+                  project.status === 'active'
+                    ? 'bg-green-500/20 text-green-700'
+                    : project.status === 'completed'
+                      ? 'bg-blue-500/20 text-blue-700'
+                      : project.status === 'overdue'
+                        ? 'bg-red-500/20 text-red-700'
+                        : 'bg-gray-500/20 text-gray-700',
+                ]"
+              >
+                {{ project.status }}
+              </div>
+              <span
+                v-if="project.daysRemaining > 0"
+                class="text-xs text-muted-foreground"
+              >
+                {{ project.daysRemaining }} days left
+              </span>
+            </div>
+
+            <!-- Libraries Count -->
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <UIcon name="i-lucide-book" class="h-4 w-4" />
+              <span
+                >{{ project.librariesCount }} libraries •
+                {{ project.notesCount }} notes</span
+              >
             </div>
           </div>
 
+          <!-- Progress Bar -->
           <div class="mt-6">
-            <div class="flex items-center justify-between text-sm">
+            <div class="flex items-center justify-between text-sm mb-2">
               <span class="text-muted-foreground">Progress</span>
-              <span class="font-medium text-primary"
-                >{{ project.progress }}%</span
+              <span
+                class="font-medium"
+                :class="
+                  project.progress === 100 ? 'text-green-600' : 'text-primary'
+                "
               >
+                {{ project.progress }}%
+              </span>
             </div>
-            <div class="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+            <div class="h-2 overflow-hidden rounded-full bg-muted">
               <div
                 class="h-full rounded-full transition-all"
-                :class="project.color"
+                :class="project.colorClass"
                 :style="{ width: project.progress + '%' }"
               />
             </div>
           </div>
 
+          <!-- View Button -->
           <UButton
             variant="outline"
             class="w-full justify-center mt-6"
-            :to="`/dashboard/projects/${project.id}`"
-            >View Project</UButton
+            :to="`/dashboard/projects/${project.documentId}`"
           >
+            View Project
+          </UButton>
         </div>
       </div>
     </div>
@@ -165,133 +168,101 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef } from "vue";
-import {
-  CalendarDate,
-  DateFormatter,
-  getLocalTimeZone,
-} from "@internationalized/date";
+import { onMounted, computed, ref } from "vue";
+import { useProjectStore } from "~/stores/projects";
+import { useStoreInitializer } from "~/composables/useStoreInitializer";
+import { ProjectService } from "~/services/projectService";
 
 definePageMeta({
   layout: "dashboard",
 });
 
-type Project = {
-  id: number;
-  name: string;
-  description: string;
-  items: number;
-  progress: number;
-  dueDate: string;
-  color: string;
+// Pinia stores
+const projectStore = useProjectStore();
+const projectService = new ProjectService();
+const isCreating = ref(false);
+
+// Store initializer for smart data fetching
+const { initialize } = useStoreInitializer();
+
+/**
+ * Show notification message
+ */
+const notify = (message: string, type: "success" | "error" = "success") => {
+  console.log(`[${type.toUpperCase()}] ${message}`);
+  // You can integrate with Nuxt UI notifications here if available
 };
 
-const projects = ref<Project[]>([
-  {
-    id: 1,
-    name: "Final Exams Prep",
-    description: "Comprehensive exam preparation",
-    items: 24,
-    progress: 65,
-    dueDate: "Apr 15, 2024",
-    color: "bg-purple-500",
-  },
-  {
-    id: 2,
-    name: "Research Paper",
-    description: "Climate change research",
-    items: 12,
-    progress: 40,
-    dueDate: "Apr 30, 2024",
-    color: "bg-blue-500",
-  },
-  {
-    id: 3,
-    name: "Physics Assignment",
-    description: "Thermodynamics problems",
-    items: 8,
-    progress: 90,
-    dueDate: "Mar 28, 2024",
-    color: "bg-green-500",
-  },
-  {
-    id: 4,
-    name: "Group Presentation",
-    description: "Marketing strategy presentation",
-    items: 15,
-    progress: 25,
-    dueDate: "May 5, 2024",
-    color: "bg-orange-500",
-  },
-]);
-
-const isCreating = ref(false);
-const newProjectName = ref("");
-const newProjectDescription = ref("");
-const newProjectIcon = ref("i-lucide-folder-kanban");
-const newProjectColor = ref("bg-indigo-500");
-const df = new DateFormatter("en-US", { dateStyle: "medium" });
-const newProjectDateRange = shallowRef<{
-  start: CalendarDate | undefined;
-  end: CalendarDate | undefined;
-}>({
-  start: undefined,
-  end: undefined,
+/**
+ * Initialize projects on mount (smart: reuses cached data)
+ */
+onMounted(async () => {
+  try {
+    await initialize();
+  } catch (error) {
+    console.error("Failed to load projects:", error);
+    notify("Failed to load projects", "error");
+  }
 });
 
-const iconOptions = [
-  { label: "Folder", value: "i-lucide-folder-kanban" },
-  { label: "Book", value: "i-lucide-book" },
-  { label: "File", value: "i-lucide-file-text" },
-  { label: "Flask", value: "i-lucide-flask" },
-  { label: "Presentation", value: "i-lucide-presentation" },
-];
-const colorOptions = [
-  { label: "Purple", value: "bg-purple-500" },
-  { label: "Blue", value: "bg-blue-500" },
-  { label: "Green", value: "bg-green-500" },
-  { label: "Orange", value: "bg-orange-500" },
-  { label: "Indigo", value: "bg-indigo-500" },
-];
+/**
+ * Handle project creation from AddBtn component
+ */
+const handleCreateProject = async (projectData: any) => {
+  try {
+    await projectStore.createProject({
+      title: projectData.title,
+      description: projectData.description,
+      icons: projectData.icons,
+      color: projectData.color,
+      start: projectData.start,
+      end: projectData.end,
+      libraries: projectData.libraries,
+    });
 
-function createProject() {
-  if (!newProjectName.value.trim()) return;
-  let dueDate = "TBD";
-  if (newProjectDateRange.value.start) {
-    dueDate = df.format(
-      newProjectDateRange.value.start.toDate(getLocalTimeZone())
-    );
-    if (newProjectDateRange.value.end) {
-      dueDate +=
-        " - " +
-        df.format(newProjectDateRange.value.end.toDate(getLocalTimeZone()));
-    }
+    isCreating.value = false;
+    notify("Project created successfully", "success");
+  } catch (error) {
+    console.error("Failed to create project:", error);
+    notify("Failed to create project", "error");
   }
-  const newProject: Project = {
-    id: projects.value.length + 1,
-    name: newProjectName.value,
-    description: newProjectDescription.value,
-    items: 0,
-    progress: 0,
-    dueDate,
-    color: newProjectColor.value,
+};
+
+/**
+ * Handle project deletion
+ */
+const handleDeleteProject = async (documentId: string) => {
+  try {
+    await projectStore.deleteProject(documentId);
+    notify("Project deleted successfully", "success");
+  } catch (error) {
+    console.error("Failed to delete project:", error);
+    notify("Failed to delete project", "error");
+  }
+};
+
+/**
+ * Format project for display using ProjectService utilities
+ */
+const formatProjectForDisplay = (project: any) => {
+  return {
+    ...project,
+    formattedDueDate: projectService.formatDateRange(
+      project.start,
+      project.end,
+    ),
+    progress: projectService.calculateProgress(project.start, project.end),
+    daysRemaining: projectService.daysRemaining(project.end),
+    isOverdue: projectService.isOverdue(project.end),
+    colorClass: projectService.getColorClass(project.color),
+    status: projectService.getStatus(project.start, project.end),
   };
-  projects.value.push(newProject);
-  newProjectName.value = "";
-  newProjectDescription.value = "";
-  newProjectIcon.value = "i-lucide-folder-kanban";
-  newProjectColor.value = "bg-indigo-500";
-  newProjectDateRange.value = { start: undefined, end: undefined };
-  isCreating.value = false;
-}
+};
 
-function formatDate(date: any) {
-  if (!date) return "";
-  const d = new Date(date);
-  return d.toLocaleDateString();
-}
-
-function deleteProject(id: number) {
-  projects.value = projects.value.filter((p) => p.id !== id);
-}
+/**
+ * Computed property for formatted projects (from Pinia store)
+ */
+const formattedProjects = computed(() => {
+  return projectStore.allProjects.map(formatProjectForDisplay);
+});
 </script>

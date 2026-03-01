@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
+import { ProjectService } from "~/services/projectService";
+import type { ProjectIcon } from "~/types/project.types";
 const route = useRoute();
+const projectStore = useProjectStore();
+const { initialize } = useStoreInitializer();
 
 const items = ref<NavigationMenuItem[][]>([
   [
@@ -64,18 +68,17 @@ const items = ref<NavigationMenuItem[][]>([
 ]);
 
 onMounted(async () => {
-  const projects = await new Promise<NavigationMenuItem[]>((resolve) =>
-    setTimeout(
-      () =>
-        resolve([
-          { label: "Chemistry", icon: "i-lucide-microscope" },
-          { label: "Mathematics", icon: "i-lucide-calculator" },
-          { label: "Physics", icon: "i-lucide-atom" },
-          { label: "Biology", icon: "i-lucide-leaf" },
-        ]),
-      500
-    )
-  );
+  // Initialize store with cached data
+  await initialize();
+  const projectService = new ProjectService();
+
+  // Map projects from store to navigation items
+  console.log("[Sidebar] Mapping projects to navigation items...");
+  const projects = Object.values(projectStore.projectsById).map((project) => ({
+    label: project.title,
+    icon: projectService.getIconName(project.icons as ProjectIcon),
+    to: `/dashboard/projects/${project.documentId}`,
+  }));
 
   const projectsItem = items.value[0]?.[3];
 

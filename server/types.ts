@@ -3,6 +3,13 @@ export interface AuthResponse {
   user: User
 }
 
+export interface RegisterResponse {
+  userId: string
+  email: string
+  username: string
+  message: string
+}
+
 export interface User {
   id: number
   username: string
