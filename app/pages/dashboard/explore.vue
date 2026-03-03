@@ -61,9 +61,6 @@ const explore = useExplore({
       color: "error",
     });
   },
-  onSuccess: (message: string) => {
-    console.log("[Explore Page]", message);
-  },
 });
 
 // Initialize pagination handlers
@@ -76,8 +73,7 @@ const { updatePage, updatePageSize } = usePaginationHandlers(
 onMounted(async () => {
   try {
     await explore.initialize();
-  } catch (error) {
-    console.error("[Explore Page] Failed to initialize:", error);
+  } catch {
     toast.add({
       title: "Initialization Error",
       description: "Failed to load explore data",

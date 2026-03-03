@@ -17,32 +17,7 @@ type ApiMutationOptions<T, R> = {
 
 export default defineNuxtPlugin(() => {
   const nuxtApp = useNuxtApp();
-
-  const shouldBypassAuthRefresh = (url: string) =>
-    url === "/api/auth/login" ||
-    url === "/api/auth/register" ||
-    url === "/api/auth/refresh" ||
-    url === "/api/auth/logout";
-
-  const withAuthHeaders = (headers?: HeadersInit) => {
-    const auth = useAuthStore();
-    const normalizedHeaders = new Headers(headers);
-
-    if (auth.accessToken) {
-      normalizedHeaders.set("Authorization", `Bearer ${auth.accessToken}`);
-    }
-
-    return normalizedHeaders;
-  };
-
-  const shouldRefresh = (url: string, error: any, skipRefresh?: boolean) => {
-    if (skipRefresh) return false;
-    if (error?.response?.status !== 401) return false;
-    if (shouldBypassAuthRefresh(url)) return false;
-
-    const auth = useAuthStore();
-    return Boolean(auth.refreshToken);
-  };
+  const forwardedHeaders = useRequestHeaders(["cookie", "authorization"]);
 
   const isUnauthorizedError = (error: any) =>
     error?.response?.status === 401 ||
@@ -52,48 +27,34 @@ export default defineNuxtPlugin(() => {
     error?.data?.statusMessage === "Unauthorized" ||
     error?.message === "Unauthorized";
 
-  const redirectToLogin = async () => {
-    const auth = useAuthStore();
-    auth.clearSession();
-    await nuxtApp.runWithContext(() => navigateTo("/auth/login"));
-  };
+  const redirectToLogin = async () =>
+    await nuxtApp.runWithContext(() =>
+      navigateTo("/auth/login", {
+        redirectCode: 302,
+      }),
+    );
 
   const request = async <T, R = T>(
     url: string,
     options: ApiRequestOptions<T, R> = {},
-    skipRefresh = false,
   ): Promise<R> => {
     try {
-      const auth = useAuthStore();
-
-      if (!shouldBypassAuthRefresh(url)) {
-        await auth.ensureValidAccessToken();
-      }
-
       const result = (await $fetch(url, {
         method: options.method || "GET",
         body: options.body,
         query: options.query,
-        headers: withAuthHeaders(options.headers),
+        headers: {
+          ...forwardedHeaders,
+          ...(options.headers || {}),
+        },
       })) as T;
 
       return options.transform ? options.transform(result) : (result as unknown as R);
     } catch (error: any) {
-      if (shouldRefresh(url, error, skipRefresh)) {
-        const auth = useAuthStore();
-        try {
-          await auth.refreshAccessToken(skipRefresh);
-        } catch (refreshError: any) {
-          if (!shouldBypassAuthRefresh(url) && isUnauthorizedError(refreshError)) {
-            await redirectToLogin();
-          }
-          throw refreshError;
-        }
-
-        return request<T, R>(url, options, true);
-      }
-
-      if (!shouldBypassAuthRefresh(url) && isUnauthorizedError(error)) {
+      if (
+        !url.startsWith("/api/auth/") &&
+        isUnauthorizedError(error)
+      ) {
         await redirectToLogin();
       }
 

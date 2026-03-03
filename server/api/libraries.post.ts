@@ -12,29 +12,12 @@ import {
 } from "../utils/library";
 import type { LibrarySingleResponse } from "~/types/library.types";
 
-function logFormData(label: string, formData: FormData) {
-  const entries = Array.from(formData.entries()).map(([key, value]) => {
-    if (value instanceof File) {
-      return {
-        key,
-        fileName: value.name,
-        fileType: value.type,
-        fileSize: value.size,
-      };
-    }
-
-    return { key, value };
-  });
-
-  console.log(label, entries);
-}
-
 function createMultipartPayload(
   form: Awaited<ReturnType<typeof readMultipartFormData>>,
 ) {
   const formData = new FormData();
   let hasType = false;
-  let hasFile = false;
+  let hasDocsUrl = false;
   let hasUrl = false;
   let hasContent = false;
 
@@ -42,11 +25,7 @@ function createMultipartPayload(
     if (!field.name || !field.data) continue;
 
     if (field.filename) {
-      const file = new Blob([new Uint8Array(field.data)], {
-        type: field.type || "application/octet-stream",
-      });
-      formData.append("File", file, field.filename);
-      hasFile = true;
+      continue;
     } else {
       const value = Buffer.from(field.data).toString("utf8");
 
@@ -69,6 +48,10 @@ function createMultipartPayload(
         formData.append("Url", value);
         if (value.trim()) hasUrl = true;
       }
+      if (field.name === "docsUrl") {
+        formData.append("DocsUrl", value);
+        if (value.trim()) hasDocsUrl = true;
+      }
       if (field.name === "content") {
         formData.append("Content", value);
         if (value.trim()) hasContent = true;
@@ -77,7 +60,7 @@ function createMultipartPayload(
   }
 
   if (!hasType) {
-    if (hasFile) {
+    if (hasDocsUrl) {
       formData.append("Type", "Docs");
     } else if (hasUrl) {
       formData.append("Type", "Url");
@@ -105,6 +88,10 @@ function createLibraryPayload(
     formData.append("Url", validated.url);
   }
 
+  if (validated.docsUrl !== undefined && validated.docsUrl !== null) {
+    formData.append("DocsUrl", validated.docsUrl);
+  }
+
   if (validated.content !== undefined && validated.content !== null) {
     formData.append("Content", validated.content);
   }
@@ -127,7 +114,6 @@ export default defineEventHandler(async (event) => {
       }
 
       const payload = createMultipartPayload(form);
-      logFormData("[libraries.post] multipart payload", payload);
 
       const response = await useApi<unknown>(event, "/library/create", {
         method: "POST",
@@ -142,7 +128,6 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const validated = validateLibraryCreate(body);
     const payload = createLibraryPayload(validated);
-    logFormData("[libraries.post] payload", payload);
 
     const response = await useApi<unknown>(event, "/library/create", {
       method: "POST",
@@ -177,12 +162,6 @@ export default defineEventHandler(async (event) => {
         statusMessage: `Validation failed: ${fieldErrors}`,
       });
     }
-
-    console.error("[libraries.post] upstream error", {
-      status: error?.status,
-      message: error?.message,
-      data: error?.data,
-    });
 
     throw createError({
       statusCode: error.status || 500,

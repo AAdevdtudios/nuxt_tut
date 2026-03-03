@@ -102,15 +102,11 @@ try {
   if (!projectStore.getProjectById(documentId)) {
     await projectStore.fetchProject(documentId);
   }
-} catch (error) {
-  console.error("[Project Detail] Failed to fetch project:", error);
-}
+} catch {}
 
 try {
   await ensureLibrariesLoaded();
-} catch (error) {
-  console.error("[Project Detail] Failed to fetch linked libraries:", error);
-}
+} catch {}
 
 const icon = computed(
   () => PROJECT_TABS.find((item) => item.value === currentTab.value)?.icon,

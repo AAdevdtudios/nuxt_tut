@@ -52,9 +52,7 @@ export interface LibraryCreateRequest {
   libraryType: LibraryType;
   url?: string;
   content?: string;
-  docID?: string | number;
-  libUUID?: string;
-  locale?: string;
+  docsUrl?: string;
   file?: File | null;
 }
 
@@ -66,8 +64,7 @@ export interface LibraryUpdateRequest {
   libraryType?: LibraryType;
   url?: string;
   content?: string;
-  docID?: string | number;
-  libUUID?: string;
+  docsUrl?: string;
   file?: File | null;
 }
 

@@ -13,29 +13,12 @@ import {
 } from "../../utils/library";
 import type { LibrarySingleResponse } from "~/types/library.types";
 
-function logFormData(label: string, formData: FormData) {
-  const entries = Array.from(formData.entries()).map(([key, value]) => {
-    if (value instanceof File) {
-      return {
-        key,
-        fileName: value.name,
-        fileType: value.type,
-        fileSize: value.size,
-      };
-    }
-
-    return { key, value };
-  });
-
-  console.log(label, entries);
-}
-
 function createMultipartPayload(
   form: Awaited<ReturnType<typeof readMultipartFormData>>,
 ) {
   const formData = new FormData();
   let hasType = false;
-  let hasFile = false;
+  let hasDocsUrl = false;
   let hasUrl = false;
   let hasContent = false;
 
@@ -43,11 +26,7 @@ function createMultipartPayload(
     if (!field.name || !field.data) continue;
 
     if (field.filename) {
-      const file = new Blob([new Uint8Array(field.data)], {
-        type: field.type || "application/octet-stream",
-      });
-      formData.append("File", file, field.filename);
-      hasFile = true;
+      continue;
     } else {
       const value = Buffer.from(field.data).toString("utf8");
 
@@ -59,6 +38,8 @@ function createMultipartPayload(
           hasType = true;
         }
       }
+      // Backward compatibility for older clients; new clients send
+      // `libraryType` only and the proxy maps it to backend `Type`.
       if (field.name === "type") {
         const type = toBackendLibraryType(value as any);
         if (type !== undefined) {
@@ -70,6 +51,10 @@ function createMultipartPayload(
         formData.append("Url", value);
         if (value.trim()) hasUrl = true;
       }
+      if (field.name === "docsUrl") {
+        formData.append("DocsUrl", value);
+        if (value.trim()) hasDocsUrl = true;
+      }
       if (field.name === "content") {
         formData.append("Content", value);
         if (value.trim()) hasContent = true;
@@ -78,7 +63,7 @@ function createMultipartPayload(
   }
 
   if (!hasType) {
-    if (hasFile) {
+    if (hasDocsUrl) {
       formData.append("Type", "Docs");
     } else if (hasUrl) {
       formData.append("Type", "Url");
@@ -104,6 +89,10 @@ function createLibraryPayload(validated: ReturnType<typeof validateLibraryUpdate
 
   if (validated.url !== undefined && validated.url !== null) {
     formData.append("Url", validated.url);
+  }
+
+  if (validated.docsUrl !== undefined && validated.docsUrl !== null) {
+    formData.append("DocsUrl", validated.docsUrl);
   }
 
   if (validated.content !== undefined && validated.content !== null) {
@@ -137,7 +126,6 @@ export default defineEventHandler(async (event) => {
       }
 
       const payload = createMultipartPayload(form);
-      logFormData("[libraries.put] multipart payload", payload);
 
       const response = await useApi<unknown>(
         event,
@@ -156,7 +144,6 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const validated = validateLibraryUpdate(body);
     const payload = createLibraryPayload(validated);
-    logFormData("[libraries.put] payload", payload);
 
     const response = await useApi<unknown>(event, `/library/items/${libraryId}`, {
       method: "PATCH",
@@ -176,12 +163,6 @@ export default defineEventHandler(async (event) => {
         statusMessage: `Validation failed: ${fieldErrors}`,
       });
     }
-
-    console.error("[libraries.put] upstream error", {
-      status: error?.status,
-      message: error?.message,
-      data: error?.data,
-    });
 
     throw createError({
       statusCode: error.status || 500,

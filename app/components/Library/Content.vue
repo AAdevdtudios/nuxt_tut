@@ -33,7 +33,7 @@
       :key="item.documentId"
       :item="item"
       :view-type="viewType"
-      @open="$emit('open-resource', item.url ?? '')"
+      @open="$emit('open-resource', item)"
       @edit="$emit('edit-item', item.documentId)"
       @delete="$emit('delete-item', item.documentId)"
     />
@@ -98,7 +98,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   "update:page": [page: number];
   "update:page-size": [size: number];
-  "open-resource": [url: string];
+  "open-resource": [item: LibraryItem];
   "delete-item": [documentId: string];
   "edit-item": [documentId: string];
 }>();

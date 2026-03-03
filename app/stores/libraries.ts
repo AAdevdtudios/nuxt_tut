@@ -22,7 +22,60 @@ import type {
 } from "~/types";
 
 export const useLibraryStore = defineStore("libraries", () => {
-  const { $api } = useNuxtApp();
+  const getApi = () => {
+    const nuxtApp = useNuxtApp();
+
+    if (nuxtApp.$api) {
+      return nuxtApp.$api;
+    }
+
+    return {
+      fetch: <T>(url: string, options?: any) => $fetch<T>(url, options),
+      mutate: <T>(url: string, options?: any) => $fetch<T>(url, options),
+    };
+  };
+
+  const uploadDocument = async (file: File): Promise<string> => {
+    const isPdf =
+      file.type?.toLowerCase() === "application/pdf" ||
+      file.name?.toLowerCase().endsWith(".pdf");
+
+    if (!isPdf) {
+      throw new Error("Only PDF files are allowed for document uploads");
+    }
+
+    const formData = new FormData();
+    formData.append("purpose", "library-document");
+    formData.append("File", file);
+
+    const response = await getApi().mutate<{ url: string }>("/api/uploads", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response?.url) {
+      throw new Error("Document upload failed");
+    }
+
+    return response.url;
+  };
+
+  const normalizePayload = async (
+    payload: LibraryCreateRequest | LibraryUpdateRequest,
+  ): Promise<LibraryCreateRequest | LibraryUpdateRequest> => {
+    if (!("file" in payload) || !payload.file) {
+      return payload;
+    }
+
+    const docsUrl = await uploadDocument(payload.file);
+
+    return {
+      ...payload,
+      libraryType: payload.libraryType ?? "doc",
+      docsUrl,
+      file: null,
+    };
+  };
 
   const toFormData = (
     payload: LibraryCreateRequest | LibraryUpdateRequest,
@@ -31,17 +84,16 @@ export const useLibraryStore = defineStore("libraries", () => {
 
     if (payload.title !== undefined) formData.append("title", payload.title);
     if (payload.libraryType !== undefined) {
-      formData.append("type", payload.libraryType);
       formData.append("libraryType", payload.libraryType);
     }
     if (payload.url !== undefined && payload.url !== null) {
       formData.append("url", payload.url);
     }
+    if ("docsUrl" in payload && payload.docsUrl !== undefined && payload.docsUrl !== null) {
+      formData.append("docsUrl", payload.docsUrl);
+    }
     if (payload.content !== undefined && payload.content !== null) {
       formData.append("content", payload.content);
-    }
-    if (payload.docID !== undefined && payload.docID !== null) {
-      formData.append("docID", String(payload.docID));
     }
     if ("file" in payload && payload.file) {
       formData.append("file", payload.file);
@@ -121,7 +173,7 @@ export const useLibraryStore = defineStore("libraries", () => {
         query.append("type", type);
       }
 
-      const response = await $api.fetch<LibrariesResponse>(
+      const response = await getApi().fetch<LibrariesResponse>(
         `/api/libraries?${query.toString()}`,
         {
           method: "GET",
@@ -161,7 +213,7 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $api.fetch<LibrarySingleResponse>(
+      const response = await getApi().fetch<LibrarySingleResponse>(
         `/api/libraries/${id}`,
         {
           method: "GET",
@@ -190,9 +242,10 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $api.mutate<LibrarySingleResponse>("/api/libraries", {
+      const normalizedPayload = await normalizePayload(payload);
+      const response = await getApi().mutate<LibrarySingleResponse>("/api/libraries", {
         method: "POST",
-        body: toFormData(payload),
+        body: toFormData(normalizedPayload),
       });
 
       if (!response?.data) throw new Error("Invalid response structure");
@@ -220,11 +273,12 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $api.mutate<LibrarySingleResponse>(
+      const normalizedPayload = await normalizePayload(payload);
+      const response = await getApi().mutate<LibrarySingleResponse>(
         `/api/libraries/${id}`,
         {
           method: "PUT",
-          body: toFormData(payload),
+          body: toFormData(normalizedPayload),
         },
       );
 
@@ -250,7 +304,7 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      await $api.mutate(`/api/libraries/${id}`, {
+      await getApi().mutate(`/api/libraries/${id}`, {
         method: "DELETE",
       });
 
@@ -277,9 +331,7 @@ export const useLibraryStore = defineStore("libraries", () => {
       // Fetch missing libraries in parallel
       const promises = missingIds.map((id) => fetchLibrary(id));
       await Promise.allSettled(promises);
-    } catch (err) {
-      console.error("[LibraryStore] Error loading libraries:", err);
-    }
+    } catch {}
   };
 
   /**

@@ -31,11 +31,9 @@ export function useStoreInitializer() {
   const initializeProjects = async (options: InitializeOptions = {}) => {
     // Skip if already loaded
     if (projectStore.allProjects.length > 0) {
-      console.log("[StoreInit] Projects already loaded, reusing");
       return;
     }
 
-    console.log("[StoreInit] Fetching projects...");
     await projectStore.fetchProjects(
       options.projectsPage || 1,
       options.projectsPageSize || 10,
@@ -46,11 +44,9 @@ export function useStoreInitializer() {
   const initializeLibraries = async (options: InitializeOptions = {}) => {
     // Skip if already loaded
     if (libraryStore.allLibraries.length > 0) {
-      console.log("[StoreInit] Libraries already loaded, reusing");
       return;
     }
 
-    console.log("[StoreInit] Fetching libraries...");
     await libraryStore.fetchLibraries(
       options.librariesPage || 1,
       options.librariesPageSize || 25,
@@ -69,7 +65,6 @@ export function useStoreInitializer() {
         initializeLibraries(options),
       ]);
     } catch (err) {
-      console.error("[StoreInit] Initialization error:", err);
       throw err;
     }
   };
@@ -78,7 +73,6 @@ export function useStoreInitializer() {
    * Force refresh projects
    */
   const refreshProjects = async (options: InitializeOptions = {}) => {
-    console.log("[StoreInit] Force refreshing projects...");
     await projectStore.fetchProjects(
       options.projectsPage || 1,
       options.projectsPageSize || 10,
@@ -90,7 +84,6 @@ export function useStoreInitializer() {
    * Force refresh libraries
    */
   const refreshLibraries = async (options: InitializeOptions = {}) => {
-    console.log("[StoreInit] Force refreshing libraries...");
     await libraryStore.fetchLibraries(
       options.librariesPage || 1,
       options.librariesPageSize || 25,

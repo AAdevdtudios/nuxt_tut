@@ -341,11 +341,9 @@ const overlay = useOverlay();
 const mobileChatSlideOver = overlay.create(LazyAiChatHistorySlideOver);
 
 async function showChatHistory() {
-  console.log(isMobile.value);
-
   if (isMobile.value) {
     showMobileHistory.value = true;
-    const instance = await mobileChatSlideOver.open({
+    await mobileChatSlideOver.open({
       chats: chatHistories.value,
       currentChatId: currentChatId.value,
       onLoadChat: (chatId: number) => {
@@ -357,7 +355,6 @@ async function showChatHistory() {
         mobileChatSlideOver.close();
       },
     });
-    console.log(instance);
   } else {
     showHistory.value = true;
   }

@@ -11,12 +11,16 @@ function normalizeLibraryType(value: unknown): LibraryItem["libraryType"] {
     return value;
   }
 
+  if (value === "docs") return "doc";
   if (value === "Docs") return "doc";
   if (value === "Url") return "url";
   if (value === "Note") return "note";
   if (value === 0) return "doc";
   if (value === 1) return "url";
   if (value === 2) return "note";
+  if (value === "0") return "doc";
+  if (value === "1") return "url";
+  if (value === "2") return "note";
   if (value === "document") return "doc";
   return "note";
 }
@@ -60,7 +64,7 @@ export function normalizeLibraryItem(input: unknown): LibraryItem {
     publishedAt: item.publishedAt ?? null,
     libUUID: item.libUUID ?? id,
     fileName: item.fileName ?? item.documentName ?? null,
-    fileUrl: item.fileUrl ?? item.documentUrl ?? item.docsUrl ?? null,
+    fileUrl: item.fileUrl ?? item.documentUrl ?? item.docsUrl ?? item.DocsUrl ?? null,
   };
 }
 

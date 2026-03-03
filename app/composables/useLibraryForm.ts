@@ -52,6 +52,14 @@ export function useLibraryForm() {
           throw new Error("File is required for document type");
         }
 
+        const isPdf =
+          formData.value.file.type?.toLowerCase() === "application/pdf" ||
+          formData.value.file.name?.toLowerCase().endsWith(".pdf");
+
+        if (!isPdf) {
+          throw new Error("Only PDF files are allowed for document type");
+        }
+
         payload.file = formData.value.file;
       }
       // Handle URL for website type

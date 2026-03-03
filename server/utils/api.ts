@@ -1,5 +1,5 @@
 import { useRuntimeConfig } from "#imports";
-import { createError, getCookie, getHeader } from "h3";
+import { createError, getCookie, getHeader, setCookie } from "h3";
 
 function normalizeUpstreamMessage(error: any) {
   const data = error?.data;
@@ -51,6 +51,59 @@ export const useApi = async <T>(
     skipContentType?: boolean;
   } = {},
 ): Promise<T> => {
+  const executeRequest = async (headers: Record<string, string>) => {
+    const config = useRuntimeConfig();
+    const baseUrl = config.API_BASE_URL;
+
+    return (await $fetch<T>(`${baseUrl}${path}`, {
+      method,
+      headers,
+      body: hasBody ? body : undefined,
+    })) as T;
+  };
+
+  const refreshServerSession = async () => {
+    const refreshToken = getCookie(event, "refresh_token");
+
+    if (!refreshToken) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: "Unauthorized",
+      });
+    }
+
+    const config = useRuntimeConfig();
+    const session = await $fetch<any>(`${config.API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: {
+        refreshToken,
+      },
+    });
+
+    const secure = process.env.NODE_ENV === "production";
+
+    setCookie(event, "access_token", session.accessToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure,
+      expires: new Date(session.accessTokenExpiresAtUtc),
+      path: "/",
+    });
+
+    setCookie(event, "refresh_token", session.refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure,
+      expires: new Date(session.refreshTokenExpiresAtUtc),
+      path: "/",
+    });
+
+    return session;
+  };
+
   const {
     method = "GET",
     body,
@@ -82,16 +135,29 @@ export const useApi = async <T>(
     }
   }
 
-  const config = useRuntimeConfig();
-  const baseUrl = config.API_BASE_URL;
-
   try {
-    return (await $fetch<T>(`${baseUrl}${path}`, {
-      method,
-      headers,
-      body: hasBody ? body : undefined,
-    })) as T;
+    return await executeRequest(headers);
   } catch (error: any) {
+    const shouldRefresh =
+      useJwt &&
+      error?.response?.status === 401 &&
+      path !== "/auth/refresh" &&
+      Boolean(getCookie(event, "refresh_token"));
+
+    if (shouldRefresh) {
+      try {
+        const session = await refreshServerSession();
+        headers.Authorization = `Bearer ${session.accessToken}`;
+        return await executeRequest(headers);
+      } catch (refreshError: any) {
+        throw createError({
+          statusCode: refreshError?.response?.status || refreshError?.statusCode || 401,
+          statusMessage: normalizeUpstreamMessage(refreshError),
+          data: refreshError?.data,
+        });
+      }
+    }
+
     throw createError({
       statusCode: error?.response?.status || 500,
       statusMessage: normalizeUpstreamMessage(error),

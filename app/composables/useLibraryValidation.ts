@@ -16,6 +16,15 @@ export function useLibraryValidation() {
   const errors = ref<ValidationError[]>([]);
   const isValid = ref(true);
 
+  const isPdfFile = (file: File | null | undefined): boolean => {
+    if (!file) return false;
+
+    const mimeType = file.type?.toLowerCase();
+    const fileName = file.name?.toLowerCase() || "";
+
+    return mimeType === "application/pdf" || fileName.endsWith(".pdf");
+  };
+
   /**
    * Validates library creation payload
    */
@@ -38,7 +47,7 @@ export function useLibraryValidation() {
         field: "libraryType",
         message: "Library type is required",
       });
-    } else if (!["url", "docs", "note"].includes(payload.libraryType)) {
+    } else if (!["url", "doc", "note"].includes(payload.libraryType)) {
       errors.value.push({
         field: "libraryType",
         message: 'Library type must be "url", "doc", or "note"',
@@ -88,6 +97,11 @@ export function useLibraryValidation() {
       errors.value.push({
         field: "file",
         message: "File is required for document type",
+      });
+    } else if (payload.libraryType === "doc" && !isPdfFile(payload.file)) {
+      errors.value.push({
+        field: "file",
+        message: "Only PDF files are allowed for document uploads",
       });
     }
 
@@ -143,6 +157,18 @@ export function useLibraryValidation() {
           message: "Content is too long (max 10,000 characters)",
         });
       }
+    }
+
+    if (
+      payload.libraryType === "doc" &&
+      payload.file !== undefined &&
+      payload.file !== null &&
+      !isPdfFile(payload.file)
+    ) {
+      errors.value.push({
+        field: "file",
+        message: "Only PDF files are allowed for document uploads",
+      });
     }
 
     isValid.value = errors.value.length === 0;

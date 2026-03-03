@@ -50,7 +50,6 @@ export default defineEventHandler(async (event) => {
 
     return response;
   } catch (error: any) {
-    console.error("[upload.post] Error:", error);
     throw createError({
       statusCode: error?.statusCode || 500,
       statusMessage:

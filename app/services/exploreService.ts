@@ -21,7 +21,6 @@ export class ExploreService {
    */
   openResource(url: string): void {
     if (!url) {
-      console.warn("[ExploreService] No URL provided to openResource");
       return;
     }
     window.open(url, "_blank");

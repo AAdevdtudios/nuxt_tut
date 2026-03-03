@@ -55,8 +55,8 @@ export interface ApiError {
   };
 }
 
-// Library Types - Aligned with Zod schemas and Strapi CMS
-export type LibraryType = "url" | "docs" | "note";
+// Library Types
+export type LibraryType = "url" | "doc" | "note";
 
 export interface LibraryItem {
   id: string;
@@ -95,9 +95,7 @@ export interface LibraryCreateRequest {
   libraryType: LibraryType;
   url?: string | null;
   content?: string | null;
-  docID?: string | number | null;
-  libUUID?: string;
-  locale?: string;
+  docsUrl?: string | null;
   file?: File | null;
 }
 
@@ -106,7 +104,7 @@ export interface LibraryUpdateRequest {
   libraryType?: LibraryType;
   url?: string | null;
   content?: string | null;
-  docID?: string | number | null;
+  docsUrl?: string | null;
   file?: File | null;
 }
 
@@ -144,7 +142,7 @@ export interface LibraryTypeOption {
 
 export const libraryTypeOptions = [
   { label: "All", value: "all" },
-  { label: "Documents", value: "docs" },
+  { label: "Documents", value: "doc" },
   { label: "Links", value: "url" },
   { label: "Notes", value: "note" },
 ] as const;

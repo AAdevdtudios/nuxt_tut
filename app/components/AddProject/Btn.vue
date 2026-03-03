@@ -13,6 +13,7 @@ const isOpen = ref(false);
 const selectedType = ref<string | null>(null);
 const step = ref<"select" | "form" | "success">("select");
 const isSubmitting = ref(false);
+const router = useRouter();
 const formData = ref<FormData>({
   title: "",
   url: "",
@@ -29,9 +30,6 @@ const library = useLibrary({
       description: error,
       color: "error",
     });
-    if (details?.length) {
-      console.warn("Validation errors:", details);
-    }
   },
   onSuccess: (message: string) => {
     toast.add({
@@ -48,7 +46,7 @@ const contentTypes = [
   {
     icon: "i-lucide-file-text",
     label: "Upload Document",
-    description: "PDF, DOCX, or TXT files",
+    description: "PDF files only",
     type: "document",
   },
   {
@@ -74,7 +72,12 @@ const contentTypes = [
 const handleBtnSelect = (type: string) => {
   if (type === "explore") {
     isOpen.value = false;
-    useRouter().push("/dashboard/explore");
+    router.push("/dashboard/explore");
+    return;
+  }
+  if (type === "note") {
+    isOpen.value = false;
+    router.push("/dashboard/notes/new");
     return;
   }
   selectedType.value = type;
@@ -84,9 +87,6 @@ const handleBtnSelect = (type: string) => {
 const handleSubmit = async () => {
   isSubmitting.value = true;
   const libraryType = mapTypeToLibraryType(selectedType.value);
-  console.log("Selected type is:");
-
-  console.log(libraryType);
 
   try {
     if (!libraryType) {
@@ -107,7 +107,6 @@ const handleSubmit = async () => {
     // Handle type-specific data
     if (selectedType.value === "document" && formData.value.file) {
       payload.file = formData.value.file;
-      console.log(payload.title);
     } else if (selectedType.value === "website") {
       try {
         new URL(formData.value.url);
@@ -144,8 +143,7 @@ const handleSubmit = async () => {
       isOpen.value = false;
       resetForm();
     }, 1500);
-  } catch (error) {
-    console.error("Failed to create library:", error);
+  } catch {
     // Error is already handled by composable's onError callback
   } finally {
     isSubmitting.value = false;
@@ -158,7 +156,7 @@ const handleSubmit = async () => {
 const mapTypeToLibraryType = (type: string | null): LibraryType | null => {
   switch (type) {
     case "document":
-      return "docs";
+      return "doc";
     case "website":
       return "url";
     case "note":
@@ -189,6 +187,8 @@ const handleClose = () => {
 <template>
   <UModal
     v-model="isOpen"
+    :modal="false"
+    :overlay="true"
     title="Add Content"
     description="Add new content to your library"
   >
@@ -273,7 +273,8 @@ const handleClose = () => {
               color="neutral"
               highlight
               label="Drop your file here"
-              description="PDF, DOCX, TXT or other files (max. 1`0MB)"
+              description="PDF files only"
+              accept="application/pdf,.pdf"
               class="w-full min-h-48"
             />
             <p v-if="formData.file" class="mt-2 text-sm text-muted-foreground">

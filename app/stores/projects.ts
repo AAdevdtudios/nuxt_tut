@@ -37,7 +37,18 @@ export interface NormalizedProject {
 }
 
 export const useProjectStore = defineStore("projects", () => {
-  const { $api } = useNuxtApp();
+  const getApi = () => {
+    const nuxtApp = useNuxtApp();
+
+    if (nuxtApp.$api) {
+      return nuxtApp.$api;
+    }
+
+    return {
+      fetch: <T>(url: string, options?: any) => $fetch<T>(url, options),
+      mutate: <T>(url: string, options?: any) => $fetch<T>(url, options),
+    };
+  };
 
   // State: Projects by documentId for quick lookup
   const projectsById = ref<Record<string, NormalizedProject>>({});
@@ -86,7 +97,7 @@ export const useProjectStore = defineStore("projects", () => {
         query.append("search", search);
       }
 
-      const response = await $api.fetch<any>(`/api/projects?${query.toString()}`, {
+      const response = await getApi().fetch<any>(`/api/projects?${query.toString()}`, {
         method: "GET",
       });
 
@@ -121,7 +132,7 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $api.fetch<any>(`/api/projects/${documentId}`, {
+      const response = await getApi().fetch<any>(`/api/projects/${documentId}`, {
         method: "GET",
       });
 
@@ -147,7 +158,7 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $api.mutate<any>("/api/projects", {
+      const response = await getApi().mutate<any>("/api/projects", {
         method: "POST",
         body: payload,
       });
@@ -178,7 +189,7 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $api.mutate<any>(`/api/projects/${documentId}`, {
+      const response = await getApi().mutate<any>(`/api/projects/${documentId}`, {
         method: "PUT",
         body: payload,
       });
@@ -206,7 +217,7 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      await $api.mutate(`/api/projects/${documentId}`, {
+      await getApi().mutate(`/api/projects/${documentId}`, {
         method: "DELETE",
       });
 

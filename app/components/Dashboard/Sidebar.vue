@@ -73,7 +73,6 @@ onMounted(async () => {
   const projectService = new ProjectService();
 
   // Map projects from store to navigation items
-  console.log("[Sidebar] Mapping projects to navigation items...");
   const projects = Object.values(projectStore.projectsById).map((project) => ({
     label: project.title,
     icon: projectService.getIconName(project.icons as ProjectIcon),

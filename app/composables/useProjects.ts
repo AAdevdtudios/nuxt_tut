@@ -153,7 +153,6 @@ export function useProjects(
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useProjects] fetchProjects error:", err);
     } finally {
       isLoading.value = false;
     }
@@ -185,7 +184,6 @@ export function useProjects(
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useProjects] fetchProject error:", err);
     } finally {
       isLoading.value = false;
     }
@@ -214,7 +212,6 @@ export function useProjects(
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useProjects] createProject error:", err);
       throw err;
     } finally {
       isLoading.value = false;
@@ -251,7 +248,6 @@ export function useProjects(
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useProjects] updateProject error:", err);
       throw err;
     } finally {
       isLoading.value = false;
@@ -277,7 +273,6 @@ export function useProjects(
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useProjects] deleteProject error:", err);
       throw err;
     } finally {
       isLoading.value = false;

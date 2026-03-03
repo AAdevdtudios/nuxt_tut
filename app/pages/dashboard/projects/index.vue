@@ -185,12 +185,14 @@ const isCreating = ref(false);
 // Store initializer for smart data fetching
 const { initialize } = useStoreInitializer();
 
-/**
- * Show notification message
- */
+const toast = useToast();
+
 const notify = (message: string, type: "success" | "error" = "success") => {
-  console.log(`[${type.toUpperCase()}] ${message}`);
-  // You can integrate with Nuxt UI notifications here if available
+  toast.add({
+    title: type === "success" ? "Success" : "Error",
+    description: message,
+    color: type === "success" ? "success" : "error",
+  });
 };
 
 /**
@@ -199,8 +201,7 @@ const notify = (message: string, type: "success" | "error" = "success") => {
 onMounted(async () => {
   try {
     await initialize();
-  } catch (error) {
-    console.error("Failed to load projects:", error);
+  } catch {
     notify("Failed to load projects", "error");
   }
 });
@@ -222,8 +223,7 @@ const handleCreateProject = async (projectData: any) => {
 
     isCreating.value = false;
     notify("Project created successfully", "success");
-  } catch (error) {
-    console.error("Failed to create project:", error);
+  } catch {
     notify("Failed to create project", "error");
   }
 };
@@ -235,8 +235,7 @@ const handleDeleteProject = async (documentId: string) => {
   try {
     await projectStore.deleteProject(documentId);
     notify("Project deleted successfully", "success");
-  } catch (error) {
-    console.error("Failed to delete project:", error);
+  } catch {
     notify("Failed to delete project", "error");
   }
 };

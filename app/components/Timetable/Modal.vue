@@ -95,8 +95,7 @@ const selectItems = computed(() =>
 const { currentIndex, currentStep, goNext, goPrev, goTo, getFinalData } =
   useStepper(steps);
 const submit = () => {
-  const payload = getFinalData();
-  console.log(payload);
+  getFinalData();
   // send to API
 };
 </script>

@@ -151,7 +151,6 @@ export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
         err instanceof Error ? err.message : "Failed to fetch explores";
       error.value = errorMessage;
       options.onError?.(errorMessage);
-      console.error("[useExplore] fetchExplores error:", err);
     } finally {
       loading.value = false;
     }
@@ -177,7 +176,6 @@ export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
         err instanceof Error ? err.message : "Failed to fetch categories";
       error.value = errorMessage;
       options.onError?.(errorMessage);
-      console.error("[useExplore] fetchCategories error:", err);
     } finally {
       loading.value = false;
     }
@@ -228,7 +226,6 @@ export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
     try {
       await Promise.all([fetchCategories(), fetchExplores()]);
     } catch (err) {
-      console.error("[useExplore] initialize error:", err);
       throw err;
     }
   };

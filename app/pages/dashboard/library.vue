@@ -31,7 +31,7 @@
       :page-count="library.pageCount.value"
       @update:page-size="updatePageSize"
       @update:page="updatePage"
-      @open-resource="library.openLibraryUrl"
+      @open-resource="openLibrary"
       @delete-item="deleteLibrary"
       @edit-item="editLibrary"
     />
@@ -39,10 +39,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, watch } from "vue";
 import { useLibrary } from "~/composables/useLibrary";
 import { useLibraryPreferencesStore } from "~/stores/libraryPreferences";
 import { usePaginationHandlers } from "~/composables/usePaginationHandlers";
+import type { LibraryItem } from "~/types";
 
 definePageMeta({
   layout: "dashboard",
@@ -50,6 +51,7 @@ definePageMeta({
 
 // Toast for notifications
 const toast = useToast();
+const router = useRouter();
 
 // Initialize library composable with enhanced error handlers
 const library = useLibrary({
@@ -59,11 +61,6 @@ const library = useLibrary({
       description: error,
       color: "error",
     });
-
-    // Log validation details if available
-    if (details && details.length > 0) {
-      console.warn("[Library Page] Validation errors:", details);
-    }
   },
   onSuccess: (message: string) => {
     toast.add({
@@ -96,9 +93,16 @@ const { updatePage, updatePageSize } = usePaginationHandlers(
 const deleteLibrary = async (documentId: string): Promise<void> => {
   try {
     await library.deleteLibrary(documentId);
-  } catch (error) {
-    console.error("[Library Page] Delete failed:", error);
+  } catch {}
+};
+
+const openLibrary = (item: LibraryItem): void => {
+  if (item.libraryType === "note") {
+    router.push(`/dashboard/notes/${item.documentId}`);
+    return;
   }
+
+  library.openLibraryUrl(item.url || item.fileUrl || "");
 };
 
 /**
@@ -106,8 +110,7 @@ const deleteLibrary = async (documentId: string): Promise<void> => {
  * @param documentId - Document ID to edit
  */
 const editLibrary = (documentId: string): void => {
-  // TODO: Implement edit functionality
-  console.log("[Library Page] Edit item:", documentId);
+  router.push(`/dashboard/notes/${documentId}`);
 };
 
 /**
@@ -116,8 +119,7 @@ const editLibrary = (documentId: string): void => {
 onMounted(async () => {
   try {
     await library.initialize();
-  } catch (error) {
-    console.error("[Library Page] Failed to initialize:", error);
+  } catch {
     toast.add({
       title: "Initialization Error",
       description: "Failed to load library",
@@ -125,4 +127,13 @@ onMounted(async () => {
     });
   }
 });
+
+watch(
+  () => library.refreshVersion.value,
+  async () => {
+    try {
+      await library.fetchLibraries();
+    } catch {}
+  },
+);
 </script>

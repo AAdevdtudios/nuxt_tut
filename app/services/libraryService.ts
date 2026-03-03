@@ -21,7 +21,6 @@ export class LibraryService {
    */
   openLibraryUrl(url: string): void {
     if (!url) {
-      console.warn("[LibraryService] No URL provided to openLibraryUrl");
       return;
     }
     window.open(url, "_blank");

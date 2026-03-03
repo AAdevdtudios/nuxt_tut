@@ -19,8 +19,7 @@ const schema = z.object({
   email: z.email("Invalid email"),
 });
 type Schema = z.output<typeof schema>;
-function onSubmit(payload: FormSubmitEvent<Schema>) {
-  console.log("Submitted", payload);
+function onSubmit(_payload: FormSubmitEvent<Schema>) {
   toast.add({
     title: "Success",
     description: "Password reset link has been sent to your email.",

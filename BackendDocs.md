@@ -487,9 +487,13 @@ Success `200`: updated project object
 Success `200`:
 ```json
 {
-  "message": "Project deleted."
+  "message": "Project permanently deleted."
 }
 ```
+
+Delete behavior:
+- project is permanently deleted
+- attached libraries are detached, not deleted
 
 ### List project libraries
 - method: `GET`
@@ -541,6 +545,68 @@ Query params:
 - `pageSize`: default `20`
 
 Success `200`: same shape as project libraries list
+
+## Analytics
+
+### Dashboard analytics
+- method: `GET`
+- url: `/analytics`
+- auth: required
+
+Success `200`:
+```json
+{
+  "streak": 4,
+  "totalLibraryItems": 12,
+  "totalProjects": 3,
+  "questionsAnswered": 45,
+  "recentActivities": [
+    {
+      "name": "Uploaded document",
+      "data": "Biology Lecture 1.pdf",
+      "time": "2026-03-03T09:15:00+00:00"
+    },
+    {
+      "name": "Solved questions",
+      "data": "8/10 correct, average score 82",
+      "time": "2026-03-03T08:55:00+00:00"
+    }
+  ]
+}
+```
+
+Fields:
+- `streak`: consecutive learning days based on study activity
+- `totalLibraryItems`: current active library items
+- `totalProjects`: current active projects
+- `questionsAnswered`: total evaluated questions solved
+- `recentActivities`: latest activity feed for the user
+
+### Per-project analytics
+- method: `GET`
+- url: `/projects/{projectId}/analytics`
+- auth: required
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "streak": 3,
+  "totalLibraryItems": 6,
+  "notesCount": 2,
+  "documentsCount": 3,
+  "linksCount": 1,
+  "questionsAnswered": 20,
+  "progressLevel": 41,
+  "recentActivities": [
+    {
+      "name": "Solved questions",
+      "data": "4/5 correct, average score 80",
+      "time": "2026-03-03T08:55:00+00:00"
+    }
+  ]
+}
+```
 
 ## Library Items
 
@@ -610,9 +676,14 @@ This route should be sent as `FormData`, not JSON.
 Fields:
 - `Title`: required string
 - `Type`: required string enum: `Note`, `Url`, `Docs`
-- `Content`: required for `Note`
+- `Content`: optional for `Note`
 - `Url`: required for `Url`
-- `File`: required for `Docs`
+- `File`: optional for `Docs`
+- `DocsUrl`: optional for `Docs`
+
+Docs rule:
+- for `Docs`, send either `File` or `DocsUrl`
+- do not send both
 
 Examples:
 
@@ -659,9 +730,9 @@ Success `201`:
 Common `400` causes on `/library/create`:
 - sent JSON instead of `multipart/form-data`
 - sent `type` in lowercase or wrong field casing for form-data
-- `Type=Note` without `Content`
 - `Type=Url` without valid `Url`
-- `Type=Docs` without `File`
+- `Type=Docs` without `File` or `DocsUrl`
+- sent both `File` and `DocsUrl`
 
 ### Update library item
 - method: `PATCH`
@@ -677,6 +748,7 @@ Fields:
 - `Type`: optional `Docs|Url|Note`
 - `Content`: optional
 - `Url`: optional
+- `DocsUrl`: optional
 - `File`: optional
 
 Example:
@@ -688,18 +760,91 @@ form.append("Content", "Updated note content");
 
 Success `200`: updated library item object
 
+## Uploads
+
+Use this route to upload note images or documents first and then save the returned URL inside note content or a docs library item.
+
+### Upload file
+- method: `POST`
+- url: `/uploads`
+- auth: required
+- content type: `multipart/form-data`
+
+Fields:
+- `Purpose`: optional, `note-image` or `library-document`
+- `LibraryItemId`: optional, use when uploading directly for an existing library item
+- `File`: required
+
+Default:
+- if `Purpose` is omitted, backend assumes `note-image`
+
+Example note image upload:
+```ts
+const form = new FormData();
+form.append("Purpose", "note-image");
+form.append("File", file);
+```
+
+Example document upload:
+```ts
+const form = new FormData();
+form.append("Purpose", "library-document");
+form.append("File", file);
+```
+
+Success `201`:
+```json
+{
+  "key": "USER_GUID/images/abc123.png",
+  "url": "http://localhost:5296/uploads/USER_GUID/images/abc123.png",
+  "fileName": "diagram.png",
+  "contentType": "image/png",
+  "size": 12345,
+  "purpose": "note-image"
+}
+```
+
+Use cases:
+- note editor uploads image to `/uploads`, then inserts returned `url` into note content
+- docs library item can be created with `DocsUrl` equal to the returned `url`
+
+### Delete upload
+- method: `DELETE`
+- url: `/uploads?key=...` or `/uploads?url=...`
+- auth: required
+
+Query params:
+- `key`: upload key returned by `/uploads`
+- `url`: upload URL returned by `/uploads`
+
+Send either `key` or `url`.
+
+Restriction:
+- user can only delete uploads inside their own upload namespace
+
+Success `200`:
+```json
+{
+  "message": "Upload deleted permanently."
+}
+```
+
 ### Delete library item
 - method: `DELETE`
 - url: `/library/items/{libraryItemId}`
 - auth: required
 
 Current implementation:
-- status code is set to `204`
-- but response body may still include a message
+- library item is permanently deleted
+- docs files stored locally are also deleted when the library item is deleted
+- note-image uploads linked to that note are also deleted automatically when the note is deleted
 
-Frontend-safe handling:
-- treat `204` as success
-- do not depend on a JSON body for this route
+Success `200`:
+```json
+{
+  "message": "Library item permanently deleted."
+}
+```
 
 ## Adaptive AI Flow
 

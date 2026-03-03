@@ -31,6 +31,10 @@ export type {
   LibraryItem,
   LibraryTypeValue,
   LibrarySelection,
+  LibraryCreateRequest,
+  LibraryUpdateRequest,
+  LibrarySingleResponse,
+  LibrariesResponse,
   LibrariesResponse as LibraryListResponse,
   LibraryType,
 } from "./library.types";

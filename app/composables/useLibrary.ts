@@ -34,6 +34,53 @@ export interface ApiValidationError {
 export function useLibrary(options: UseLibraryOptions = {}) {
   const service = new LibraryService();
   const { $api } = useNuxtApp();
+  const refreshVersion = useState<number>("library-refresh-version", () => 0);
+
+  const bumpRefreshVersion = () => {
+    refreshVersion.value += 1;
+  };
+
+  const uploadDocument = async (file: File): Promise<string> => {
+    const isPdf =
+      file.type?.toLowerCase() === "application/pdf" ||
+      file.name?.toLowerCase().endsWith(".pdf");
+
+    if (!isPdf) {
+      throw new Error("Only PDF files are allowed for document uploads");
+    }
+
+    const formData = new FormData();
+    formData.append("purpose", "library-document");
+    formData.append("File", file);
+
+    const response = await $api.mutate<{ url: string }>("/api/uploads", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response?.url) {
+      throw new Error("Document upload failed");
+    }
+
+    return response.url;
+  };
+
+  const normalizeCreateOrUpdatePayload = async (
+    payload: LibraryCreateRequest | LibraryUpdateRequest,
+  ): Promise<LibraryCreateRequest | LibraryUpdateRequest> => {
+    if (!payload.file) {
+      return payload;
+    }
+
+    const docsUrl = await uploadDocument(payload.file);
+
+    return {
+      ...payload,
+      libraryType: payload.libraryType ?? "doc",
+      docsUrl,
+      file: null,
+    };
+  };
 
   const toFormData = (
     payload: LibraryCreateRequest | LibraryUpdateRequest,
@@ -42,23 +89,16 @@ export function useLibrary(options: UseLibraryOptions = {}) {
 
     if (payload.title !== undefined) formData.append("title", payload.title);
     if (payload.libraryType !== undefined) {
-      formData.append("type", payload.libraryType);
       formData.append("libraryType", payload.libraryType);
     }
     if (payload.url !== undefined && payload.url !== null) {
       formData.append("url", payload.url);
     }
+    if ("docsUrl" in payload && payload.docsUrl !== undefined && payload.docsUrl !== null) {
+      formData.append("docsUrl", payload.docsUrl);
+    }
     if (payload.content !== undefined && payload.content !== null) {
       formData.append("content", payload.content);
-    }
-    if (payload.docID !== undefined && payload.docID !== null) {
-      formData.append("docID", String(payload.docID));
-    }
-    if ("libUUID" in payload && payload.libUUID) {
-      formData.append("libUUID", payload.libUUID);
-    }
-    if ("locale" in payload && payload.locale) {
-      formData.append("locale", payload.locale);
     }
     if (payload.file) {
       formData.append("file", payload.file);
@@ -159,7 +199,6 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useLibrary] fetchLibraries error:", err);
     } finally {
       isLoading.value = false;
     }
@@ -192,7 +231,6 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useLibrary] fetchLibrary error:", err);
     } finally {
       isLoading.value = false;
     }
@@ -204,25 +242,37 @@ export function useLibrary(options: UseLibraryOptions = {}) {
    */
   const createLibrary = async (
     payload: LibraryCreateRequest,
-  ): Promise<void> => {
+    refreshList: boolean = true,
+  ): Promise<LibraryItem | null> => {
     try {
       isLoading.value = true;
       error.value = null;
+      const normalizedPayload = await normalizeCreateOrUpdatePayload(payload);
+      const formData = toFormData(normalizedPayload);
 
-      await $api.mutate<LibrarySingleResponse>("/api/libraries", {
+      const response = await $api.mutate<LibrarySingleResponse>("/api/libraries", {
         method: "POST",
-        body: toFormData(payload),
+        body: formData,
       });
 
       options.onSuccess?.("Library created successfully");
-      // Refresh the list after creation
-      await fetchLibraries();
+      if (response?.data) {
+        currentLibrary.value = response.data;
+      }
+
+      bumpRefreshVersion();
+
+      if (refreshList) {
+        await fetchLibraries();
+      }
+
+      return response?.data ?? null;
     } catch (err) {
       const { message, details } = normalizeError(err);
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useLibrary] createLibrary error:", err);
+      return null;
     } finally {
       isLoading.value = false;
     }
@@ -236,7 +286,8 @@ export function useLibrary(options: UseLibraryOptions = {}) {
   const updateLibrary = async (
     documentId: string,
     payload: LibraryUpdateRequest,
-  ): Promise<void> => {
+    refreshList: boolean = true,
+  ): Promise<LibraryItem | null> => {
     try {
       isLoading.value = true;
       error.value = null;
@@ -245,7 +296,7 @@ export function useLibrary(options: UseLibraryOptions = {}) {
         `/api/libraries/${documentId}`,
         {
           method: "PUT",
-          body: toFormData(payload),
+          body: toFormData(await normalizeCreateOrUpdatePayload(payload)),
         },
       );
 
@@ -254,14 +305,18 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       }
 
       options.onSuccess?.("Library updated successfully");
-      // Refresh the list after update
-      await fetchLibraries();
+      bumpRefreshVersion();
+      if (refreshList) {
+        await fetchLibraries();
+      }
+
+      return response?.data ?? null;
     } catch (err) {
       const { message, details } = normalizeError(err);
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useLibrary] updateLibrary error:", err);
+      return null;
     } finally {
       isLoading.value = false;
     }
@@ -281,6 +336,7 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       });
 
       options.onSuccess?.("Library deleted successfully");
+      bumpRefreshVersion();
       // Refresh the list after deletion
       await fetchLibraries();
     } catch (err) {
@@ -288,7 +344,6 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       error.value = message;
       validationErrors.value = details.map((d) => ({ message: d }));
       options.onError?.(message, details);
-      console.error("[useLibrary] deleteLibrary error:", err);
     } finally {
       isLoading.value = false;
     }
@@ -358,6 +413,7 @@ export function useLibrary(options: UseLibraryOptions = {}) {
     pageCount,
     isEmpty,
     pageSizeOptions: [10, 25, 50, 100],
+    refreshVersion,
 
     // Pagination
     page: pagination.page,
