@@ -2,6 +2,10 @@ import { readBody, createError } from "h3";
 import { useApi } from "../../utils/api";
 import { validateProjectUpdate } from "../../schemas/project.schema";
 import type { ProjectSingleResponse } from "~/types/project.types";
+import {
+  normalizeProjectSingleResponse,
+  toProjectIconEnum,
+} from "../../utils/project";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,62 +19,40 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event);
-
-    // Validate request body using Zod schema
     const validated = validateProjectUpdate(body);
-
-    // Prepare request payload with validated data
     const payload = {
-      data: {
-        ...(validated.title && { title: validated.title }),
-        ...(validated.description !== undefined && {
-          description: validated.description,
-        }),
-        ...(validated.icons && { icons: validated.icons }),
-        ...(validated.color && { color: validated.color }),
-        ...(validated.start && { start: validated.start }),
-        ...(validated.end && { end: validated.end }),
-        ...(validated.libraries && { libraries: validated.libraries }),
-      },
+      ...(validated.title !== undefined && { Title: validated.title }),
+      ...(validated.description !== undefined && {
+        Description: validated.description,
+      }),
+      ...(validated.icons !== undefined && {
+        Icon: toProjectIconEnum(validated.icons),
+      }),
+      ...(validated.color !== undefined && { Color: validated.color }),
+      ...(validated.start !== undefined && {
+        Start: new Date(validated.start).toISOString(),
+      }),
+      ...(validated.end !== undefined && {
+        End: new Date(validated.end).toISOString(),
+      }),
+      ...(validated.libraries !== undefined && {
+        LibraryIds: validated.libraries.map(String),
+      }),
+      ReplaceLibraries: validated.libraries !== undefined,
     };
 
-    console.log("[projects.put] Payload:", payload);
-
-    const response = await useApi<ProjectSingleResponse>(
+    const response = await useApi<unknown>(
       event,
       `/projects/${documentId}`,
       {
-        method: "PUT",
+        method: "PATCH",
         body: payload,
         useJwt: true,
       },
     );
 
-    // Process response to add library counts
-    if (response?.data) {
-      const libraries = response.data.libraries || [];
-      const nonNoteLibraries = libraries.filter(
-        (lib: any) => lib.libraryType !== "note",
-      );
-      const noteLibraries = libraries.filter(
-        (lib: any) => lib.libraryType === "note",
-      );
-
-      response.data = {
-        ...response.data,
-        libraries: nonNoteLibraries,
-        librariesCount: nonNoteLibraries.length,
-        notesCount: noteLibraries.length,
-      };
-    }
-
-    console.log("[projects.put] Response:", response);
-
-    return response;
+    return normalizeProjectSingleResponse(response) as ProjectSingleResponse;
   } catch (error: any) {
-    console.error("[projects.put] Error:", error);
-
-    // Handle validation errors from Zod
     if (error instanceof Error && error.name === "ZodError") {
       const zodError = error as any;
       const fieldErrors = (zodError.errors || [])
@@ -84,7 +66,6 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Handle array-formatted validation errors
     if (Array.isArray(error)) {
       const fieldErrors = error
         .map(

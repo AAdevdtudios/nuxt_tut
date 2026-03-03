@@ -11,11 +11,11 @@ const toast = useToast();
 
 const fields: AuthFormField[] = [
   {
-    name: "username",
+    name: "displayName",
     type: "text",
-    autocomplete: "username",
-    label: "User Name",
-    placeholder: "Enter your unique user name",
+    autocomplete: "name",
+    label: "Display Name",
+    placeholder: "Enter your name",
     required: true,
   },
   {
@@ -59,9 +59,9 @@ const providers = [
 ];
 
 const schema = z.object({
-  username: z
-    .string("User name is required")
-    .min(5, "Must be at least 5 characters"),
+  displayName: z
+    .string("Display name is required")
+    .min(2, "Must be at least 2 characters"),
   email: z.email("Invalid email"),
   password: z
     .string("Password is required")
@@ -69,9 +69,6 @@ const schema = z.object({
 });
 
 type Schema = z.output<typeof schema>;
-
-const nuxtApp = useNuxtApp();
-console.log(nuxtApp.$foo);
 
 const auth = useAuthStore();
 
@@ -84,11 +81,12 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   pending.value = true;
   try {
     await auth.register(payload.data);
+    await auth.fetchCurrentUser();
     toast.add({
       title: "Success",
       description: "Account created successfully",
     });
-    await navigateTo("/auth/login");
+    await navigateTo("/");
   } catch (error: any) {
     errorMessage.value =
       error?.message || "Registration failed. Please try again.";

@@ -65,6 +65,7 @@ export function useProjects(
   options: UseProjectsOptions = {},
 ): UseProjectsReturn {
   const service = new ProjectService();
+  const { $api } = useNuxtApp();
   const pagination = usePagination();
 
   // Reactive state
@@ -132,8 +133,11 @@ export function useProjects(
         query.append("search", searchQuery.value);
       }
 
-      const response = await $fetch<ProjectsResponse>(
+      const response = await $api.fetch<ProjectsResponse>(
         `/api/projects?${query.toString()}`,
+        {
+          method: "GET",
+        },
       );
 
       if (!response?.data) {
@@ -163,8 +167,11 @@ export function useProjects(
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<ProjectSingleResponse>(
+      const response = await $api.fetch<ProjectSingleResponse>(
         `/api/projects/${documentId}`,
+        {
+          method: "GET",
+        },
       );
 
       if (!response?.data) {
@@ -195,7 +202,7 @@ export function useProjects(
       error.value = null;
       validationErrors.value = [];
 
-      await $fetch<ProjectSingleResponse>("/api/projects", {
+      await $api.mutate<ProjectSingleResponse>("/api/projects", {
         method: "POST",
         body: payload,
       });
@@ -225,7 +232,7 @@ export function useProjects(
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<ProjectSingleResponse>(
+      const response = await $api.mutate<ProjectSingleResponse>(
         `/api/projects/${documentId}`,
         {
           method: "PUT",
@@ -259,7 +266,7 @@ export function useProjects(
       isLoading.value = true;
       error.value = null;
 
-      await $fetch(`/api/projects/${documentId}`, {
+      await $api.mutate(`/api/projects/${documentId}`, {
         method: "DELETE",
       });
 

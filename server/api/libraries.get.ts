@@ -2,47 +2,42 @@ import { getQuery, createError } from "h3";
 import { useApi } from "../utils/api";
 import { parseLibrariesQuery } from "../schemas/library.schema";
 import type { LibrariesResponse } from "~/types/library.types";
+import {
+  normalizeLibrariesResponse,
+  toBackendLibraryType,
+} from "../utils/library";
 
 export default defineEventHandler(async (event) => {
   try {
-    // Validate and parse query parameters
     const query = getQuery(event);
     const parsed = parseLibrariesQuery(query);
 
-    const page = parsed.page;
-    const pageSize = parsed.pageSize;
-    const search = parsed.search;
-    const libraryType = parsed.libraryType;
-
-    // Build Strapi params
-    const params: Record<string, any> = {
-      "pagination[page]": page,
-      "pagination[pageSize]": pageSize,
+    const params: Record<string, string> = {
+      page: String(parsed.page),
+      pageSize: String(parsed.pageSize),
     };
 
-    if (search && search.trim() !== "") {
-      params["filters[$or][0][title][$containsi]"] = search;
-      params["filters[$or][1][content][$containsi]"] = search;
+    if (parsed.search && parsed.search.trim() !== "") {
+      params.search = parsed.search;
     }
 
-    if (libraryType && libraryType !== "all") {
-      params["filters[libraryType][$eq]"] = libraryType;
+    if (parsed.libraryType && parsed.libraryType !== "all") {
+      const backendType = toBackendLibraryType(parsed.libraryType);
+      if (backendType) {
+        params.type = backendType;
+      }
     }
 
-    // Build query string
     const queryString = new URLSearchParams(params).toString();
-    const path = `/libraries?${queryString}`;
+    const path = `/library/items?${queryString}`;
 
-    const response = await useApi<LibrariesResponse>(event, path, {
+    const response = await useApi<unknown>(event, path, {
       method: "GET",
       useJwt: true,
     });
 
-    return response;
+    return normalizeLibrariesResponse(response) as LibrariesResponse;
   } catch (error: any) {
-    console.error("[libraries.get] Error:", error);
-
-    // Handle validation errors
     if (error.name === "ZodError") {
       const fieldErrors = error.errors
         .map((err: any) => `${err.path.join(".")} - ${err.message}`)

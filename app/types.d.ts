@@ -1,19 +1,49 @@
-export interface AuthResponse {
-  jwt: string;
-  user: User;
+export interface AuthSessionResponse {
+  userId: string;
+  email: string;
+  displayName: string;
+  role: string;
+  accessToken: string;
+  accessTokenExpiresAtUtc: string;
+  refreshToken: string;
+  refreshTokenExpiresAtUtc: string;
+}
+
+export interface SubscriptionUsage {
+  questionsUsed: number;
+  questionLimit: number;
+  essayGradingsUsed: number;
+  essayGradingsLimit: number;
+  documentsUsed: number;
+  documentLimit: number;
+  processedPagesUsed: number;
+  processedPagesLimit: number;
+}
+
+export interface SubscriptionInfo {
+  planCode: string;
+  planName: string;
+  priceUsdCents: number;
+  discountPercent: number;
+  effectivePriceUsdCents: number;
+  status: string;
+  hasCompetitiveFeatures: boolean;
+  hasDeepAnalytics: boolean;
+  allowedChatTiers: string[];
+  isUnlimitedForTesting: boolean;
+  periodStartUtc: string;
+  periodEndUtc: string;
+  usage: SubscriptionUsage;
 }
 
 export interface User {
-  id: number;
-  username: string;
+  id: string;
   email: string;
-  confirmed: boolean;
-  blocked: boolean;
-  role?: {
-    id: number;
-    name: string;
-    type: string;
-  };
+  displayName: string;
+  role: string;
+  createdAtUtc?: string;
+  isLocked?: boolean;
+  subscription?: SubscriptionInfo | null;
 }
 
 export interface ApiError {
@@ -26,10 +56,10 @@ export interface ApiError {
 }
 
 // Library Types - Aligned with Zod schemas and Strapi CMS
-export type LibraryType = "url" | "doc" | "note";
+export type LibraryType = "url" | "docs" | "note";
 
 export interface LibraryItem {
-  id: number;
+  id: string;
   documentId: string;
   title: string;
   url?: string | null;
@@ -40,6 +70,8 @@ export interface LibraryItem {
   updatedAt: string;
   publishedAt?: string | null;
   libUUID?: string;
+  fileName?: string | null;
+  fileUrl?: string | null;
 }
 
 export interface LibrariesResponse {
@@ -66,6 +98,7 @@ export interface LibraryCreateRequest {
   docID?: string | number | null;
   libUUID?: string;
   locale?: string;
+  file?: File | null;
 }
 
 export interface LibraryUpdateRequest {
@@ -74,10 +107,11 @@ export interface LibraryUpdateRequest {
   url?: string | null;
   content?: string | null;
   docID?: string | number | null;
+  file?: File | null;
 }
 
 export interface UploadedFile {
-  id: number;
+  id: string;
   name: string;
   alternativeText?: string | null;
   caption?: string | null;
@@ -110,7 +144,7 @@ export interface LibraryTypeOption {
 
 export const libraryTypeOptions = [
   { label: "All", value: "all" },
-  { label: "Documents", value: "doc" },
+  { label: "Documents", value: "docs" },
   { label: "Links", value: "url" },
   { label: "Notes", value: "note" },
 ] as const;

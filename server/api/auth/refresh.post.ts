@@ -1,4 +1,9 @@
-import { defineEventHandler, readBody, setCookie } from "h3";
+import {
+  defineEventHandler,
+  getCookie,
+  readBody,
+  setCookie,
+} from "h3";
 import type { AuthSessionResponse } from "~~/server/types";
 import { useApi } from "~~/server/utils/api";
 
@@ -24,13 +29,11 @@ function setAuthCookies(event: any, session: AuthSessionResponse) {
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
+  const refreshToken = body?.refreshToken || getCookie(event, "refresh_token");
 
-  const response = await useApi<AuthSessionResponse>(event, "/auth/login", {
+  const response = await useApi<AuthSessionResponse>(event, "/auth/refresh", {
     method: "POST",
-    body: {
-      email: body?.email,
-      password: body?.password,
-    },
+    body: { refreshToken },
     useJwt: false,
   });
 

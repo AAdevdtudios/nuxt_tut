@@ -74,7 +74,7 @@
       :items="PROJECT_TABS"
       class="mb-3 w-full"
     />
-    <component :is="currentTabComponent()" />
+    <component :is="currentTabComponent()" v-bind="currentTabProps" />
   </DashboardBodyLayout>
 </template>
 <script setup lang="ts">
@@ -82,22 +82,44 @@ import { useIsMobile } from "~/composable/useIsMobile";
 import { PROJECT_TABS } from "~/constants/projects.const";
 const { isMobile } = useIsMobile();
 import { useRoute } from "vue-router";
-import { useStoreInitializer } from "~/composables/useStoreInitializer";
 import { useProjectRelationships } from "~/composables/useProjectRelationships";
 import { ProjectService } from "~/services/projectService";
 import type { ProjectIcon } from "~/types/project.types";
+import { useProjectStore } from "~/stores/projects";
 
 var currentTab = ref("overview");
 const route = useRoute();
 const documentId = route.params.id as string;
-const { initialize } = useStoreInitializer();
+const projectStore = useProjectStore();
 const projectService = new ProjectService();
+const {
+  projectWithMetadata,
+  projectLibraries,
+  ensureLibrariesLoaded,
+} = useProjectRelationships(documentId);
 
-await initialize();
+try {
+  if (!projectStore.getProjectById(documentId)) {
+    await projectStore.fetchProject(documentId);
+  }
+} catch (error) {
+  console.error("[Project Detail] Failed to fetch project:", error);
+}
 
-const { projectWithMetadata } = useProjectRelationships(documentId);
+try {
+  await ensureLibrariesLoaded();
+} catch (error) {
+  console.error("[Project Detail] Failed to fetch linked libraries:", error);
+}
+
 const icon = computed(
   () => PROJECT_TABS.find((item) => item.value === currentTab.value)?.icon,
+);
+const materialLibraries = computed(() =>
+  projectLibraries.value.filter((item) => item && item.libraryType !== "note"),
+);
+const noteLibraries = computed(() =>
+  projectLibraries.value.filter((item) => item && item.libraryType === "note"),
 );
 
 const tabUi = computed(() => {
@@ -105,6 +127,33 @@ const tabUi = computed(() => {
   return {
     indicator: `${colorClass}`,
   };
+});
+
+const currentTabProps = computed(() => {
+  const project = projectWithMetadata.value;
+
+  switch (currentTab.value) {
+    case "overview":
+      return {
+        project,
+        materials: materialLibraries.value,
+        notes: noteLibraries.value,
+      };
+    case "materials":
+      return {
+        materials: materialLibraries.value,
+      };
+    case "notes":
+      return {
+        notes: noteLibraries.value,
+      };
+    case "settings":
+      return {
+        projectName: project?.title,
+      };
+    default:
+      return {};
+  }
 });
 
 function getCurrentTab(val: string | number) {

@@ -1,32 +1,47 @@
-export interface AuthResponse {
-  jwt: string
-  user: User
+export interface AuthSessionResponse {
+  userId: string;
+  email: string;
+  displayName: string;
+  role: string;
+  accessToken: string;
+  accessTokenExpiresAtUtc: string;
+  refreshToken: string;
+  refreshTokenExpiresAtUtc: string;
 }
 
-export interface RegisterResponse {
-  userId: string
-  email: string
-  username: string
-  message: string
+export interface SubscriptionUsage {
+  questionsUsed: number;
+  questionLimit: number;
+  essayGradingsUsed: number;
+  essayGradingsLimit: number;
+  documentsUsed: number;
+  documentLimit: number;
+  processedPagesUsed: number;
+  processedPagesLimit: number;
 }
 
-export interface User {
-  id: number
-  username: string
-  email: string
-  confirmed: boolean
-  blocked: boolean
-  role?: {
-    id: number
-    name: string
-    type: string
-  }
+export interface SubscriptionInfo {
+  planCode: string;
+  planName: string;
+  priceUsdCents: number;
+  discountPercent: number;
+  effectivePriceUsdCents: number;
+  status: string;
+  hasCompetitiveFeatures: boolean;
+  hasDeepAnalytics: boolean;
+  allowedChatTiers: string[];
+  isUnlimitedForTesting: boolean;
+  periodStartUtc: string;
+  periodEndUtc: string;
+  usage: SubscriptionUsage;
 }
-export interface ApiError {
-  status: number
-  name: string
-  message: string
-  details?: {
-    errors: Array<{ id: string; message: string; field: string }>
-  }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  createdAtUtc: string;
+  isLocked: boolean;
+  subscription: SubscriptionInfo | null;
 }

@@ -10,9 +10,9 @@
     <UButton
       v-for="category in categories"
       :key="category.id"
-      @click="$emit('select', category.slug)"
+      @click="$emit('select', category.id)"
       class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors capitalize"
-      :variant="selected === category.slug ? 'solid' : 'ghost'"
+      :variant="selected === category.id ? 'solid' : 'ghost'"
     >
       {{ category.name }}
     </UButton>
@@ -41,12 +41,12 @@ import type { Category } from "~/types/explore.types";
 defineProps<{
   /** List of available categories */
   categories: Category[];
-  /** Currently selected category slug */
+  /** Currently selected category id */
   selected: string;
 }>();
 
 defineEmits<{
-  /** Emitted when a category is selected with its slug */
-  select: [slug: string];
+  /** Emitted when a category is selected with its id */
+  select: [categoryId: string];
 }>();
 </script>

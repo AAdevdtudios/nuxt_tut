@@ -1,105 +1,193 @@
 # Frontend Integration
 
-## Base assumptions
-- all protected routes require `Authorization: Bearer <token>`
-- all request/response bodies are JSON unless multipart upload is needed
-- when validation fails, API usually returns `400`
-- when auth fails, API returns `401`
-- when ownership/resource check fails, API returns `404` or `403`
+This file is the frontend contract for the current backend.
 
-## Common auth routes
+Use:
+- base API URL: `http://localhost:5296`
+- frontend origin in local dev: `http://localhost:3000`
+- auth header for protected routes: `Authorization: Bearer <accessToken>`
 
-### Register
-`POST /auth/register`
+Important:
+- most routes use `application/json`
+- library create/update with file upload use `multipart/form-data`
+- direct AI routes under `/api/ai/*` are currently suspended for public use and usually return `410`
+- adaptive routes under `/projects/{projectId}/adaptive/*` are the active frontend AI routes
 
-Request:
+## Common Error Shapes
+
+### Unauthorized
+Status: `401`
 ```json
 {
-  "email": "user@example.com",
-  "password": "StrongPassword123$",
-  "displayName": "Dev Therapist"
+  "error": "Unauthorized"
 }
 ```
 
-Success:
+or:
 ```json
 {
-  "userId": "GUID",
-  "email": "user@example.com",
-  "displayName": "Dev Therapist",
-  "role": "user",
-  "accessToken": "...",
-  "accessTokenExpiresAtUtc": "2026-02-28T21:00:00+00:00",
-  "refreshToken": "...",
-  "refreshTokenExpiresAtUtc": "2026-03-07T21:00:00+00:00"
+  "error": "Missing or invalid access token."
 }
 ```
 
-### Login
-`POST /auth/login`
-
-Request:
+### Forbidden
+Status: `403`
 ```json
 {
-  "email": "user@example.com",
-  "password": "StrongPassword123$"
+  "error": "Admin role required.",
+  "code": "Forbidden"
 }
 ```
 
-Success:
+### Validation / business error
+Status: `400`
 ```json
 {
-  "userId": "GUID",
-  "email": "user@example.com",
-  "displayName": "Dev Therapist",
-  "role": "user",
-  "accessToken": "...",
-  "accessTokenExpiresAtUtc": "2026-02-28T21:00:00+00:00",
-  "refreshToken": "...",
-  "refreshTokenExpiresAtUtc": "2026-03-07T21:00:00+00:00"
+  "error": "Provide at least one field to update.",
+  "code": "Validation"
 }
 ```
 
-### Refresh token
-`POST /auth/refresh`
-
-Request:
+### FastEndpoints validation error
+Status: `400`
 ```json
 {
-  "refreshToken": "..."
+  "statusCode": 400,
+  "message": "One or more errors occurred!",
+  "errors": {
+    "fieldName": [
+      "validation message"
+    ]
+  }
 }
 ```
 
-Success:
+### Not found
+Status: `404`
 ```json
 {
-  "userId": "GUID",
-  "email": "user@example.com",
-  "displayName": "Dev Therapist",
-  "role": "user",
-  "accessToken": "...",
-  "accessTokenExpiresAtUtc": "2026-02-28T21:00:00+00:00",
-  "refreshToken": "...",
-  "refreshTokenExpiresAtUtc": "2026-03-07T21:00:00+00:00"
+  "error": "Project not found",
+  "code": "NotFound"
 }
 ```
 
-Use this when API returns `401` because access token expired.
-Recommended frontend flow:
-1. intercept `401`
-2. call refresh endpoint once
-3. retry failed request
+### Direct AI route suspended
+Status: `410`
+```json
+{
+  "error": "Direct question generation endpoint is temporarily suspended."
+}
+```
+
+## Auth Flow
+
+Frontend storage:
+- store `accessToken`
+- store `refreshToken`
+- on refresh success, replace both
+
+Refresh flow:
+1. protected request returns `401`
+2. call `POST /auth/refresh`
+3. if refresh succeeds, retry original request once
 4. if refresh fails, log user out
 
+## Authentication
+
+### Register
+- method: `POST`
+- url: `/auth/register`
+- auth: none
+- content type: `application/json`
+
+Request:
+```json
+{
+  "email": "user@example.com",
+  "displayName": "Dev Therapist",
+  "password": "StrongPassword123"
+}
+```
+
+Success `201`:
+```json
+{
+  "userId": "GUID",
+  "email": "user@example.com",
+  "displayName": "Dev Therapist",
+  "role": "user",
+  "accessToken": "jwt",
+  "accessTokenExpiresAtUtc": "2026-03-01T12:00:00+00:00",
+  "refreshToken": "refresh-token",
+  "refreshTokenExpiresAtUtc": "2026-03-08T12:00:00+00:00"
+}
+```
+
 Notes:
-- refresh tokens are rotated
-- when refresh succeeds, replace both stored `accessToken` and `refreshToken`
-- do not keep using the old refresh token after a successful refresh
+- password must be at least 8 chars
+- password must contain uppercase, lowercase, number
 
-### Current user profile
-`GET /auth/me`
+### Login
+- method: `POST`
+- url: `/auth/login`
+- auth: none
+- content type: `application/json`
 
-Success:
+Request:
+```json
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123"
+}
+```
+
+Success `200`: same shape as register
+
+Common errors:
+- `401` invalid credentials
+- `423` user locked
+
+### Refresh token
+- method: `POST`
+- url: `/auth/refresh`
+- auth: none
+- content type: `application/json`
+
+Request:
+```json
+{
+  "refreshToken": "refresh-token"
+}
+```
+
+Success `200`: same shape as login/register
+
+### Logout
+- method: `POST`
+- url: `/auth/logout`
+- auth: required
+- content type: `application/json`
+
+Request:
+```json
+{
+  "refreshToken": "refresh-token"
+}
+```
+
+Success `200`:
+```json
+{
+  "message": "Logged out."
+}
+```
+
+### Current user
+- method: `GET`
+- url: `/auth/me`
+- auth: required
+
+Success `200`:
 ```json
 {
   "id": "GUID",
@@ -135,12 +223,14 @@ Success:
 }
 ```
 
-## Subscription routes
+## Subscriptions
 
-### List available plans
-`GET /subscription/plans`
+### List plans
+- method: `GET`
+- url: `/subscription/plans`
+- auth: none
 
-Success:
+Success `200`:
 ```json
 [
   {
@@ -153,39 +243,22 @@ Success:
     "monthlyProcessedPageLimit": 50,
     "hasCompetitiveFeatures": false,
     "hasDeepAnalytics": false
-  },
-  {
-    "code": "basic",
-    "name": "Basic",
-    "priceUsdCents": 700,
-    "monthlyQuestionLimit": 250,
-    "monthlyEssayLimit": 40,
-    "documentLimit": 10,
-    "monthlyProcessedPageLimit": 1000,
-    "hasCompetitiveFeatures": false,
-    "hasDeepAnalytics": false
-  },
-  {
-    "code": "pro",
-    "name": "Pro",
-    "priceUsdCents": 2400,
-    "monthlyQuestionLimit": 2000,
-    "monthlyEssayLimit": 250,
-    "documentLimit": 100,
-    "monthlyProcessedPageLimit": 10000,
-    "hasCompetitiveFeatures": true,
-    "hasDeepAnalytics": true
   }
 ]
 ```
 
-### Get my subscription
-`GET /subscription/me`
+### My subscription
+- method: `GET`
+- url: `/subscription/me`
+- auth: required
 
-Response shape matches the `subscription` object from `/auth/me`.
+Success `200`: same shape as `subscription` in `/auth/me`
 
-### Admin: assign plan manually
-`PATCH /admin/subscription/users/{userId}`
+### Admin assign plan
+- method: `PATCH`
+- url: `/admin/subscription/users/{userId}`
+- auth: admin only
+- content type: `application/json`
 
 Request:
 ```json
@@ -197,28 +270,137 @@ Request:
 }
 ```
 
-Use this because payment provider integration is not wired yet.
-
-## Project routes
-
-### List projects
-`GET /projects?page=1&pageSize=20&search=`
-
-Success:
+Success `200`:
 ```json
 {
+  "userId": "GUID",
+  "planCode": "pro",
+  "discountPercent": 0,
+  "unlimitedTesting": true
+}
+```
+
+## Explore Catalog
+
+These routes are public and cached.
+
+### List categories
+- method: `GET`
+- url: `/catalog/categories?search=&page=1&pageSize=20`
+- auth: none
+- request type: query string only
+
+Query params:
+- `search`: optional string
+- `page`: optional, default `1`
+- `pageSize`: optional, default `20`
+
+Success `200`:
+```json
+{
+  "count": 2,
+  "totalCount": 12,
+  "page": 1,
+  "pageSize": 20,
   "items": [
     {
       "id": "GUID",
-      "title": "Project title",
-      "description": "...",
-      "icon": 2,
-      "color": "FF5733",
+      "name": "Biology",
+      "description": "Biology notes, laboratory reports, cellular biology, ecology and genetics.",
+      "createdAtUtc": "2026-03-01T00:00:00+00:00"
+    }
+  ]
+}
+```
+
+### Get category by id
+- method: `GET`
+- url: `/catalog/categories/{categoryId}`
+- auth: none
+
+Success `200`:
+```json
+{
+  "id": "GUID",
+  "name": "Biology",
+  "description": "Biology notes, laboratory reports, cellular biology, ecology and genetics.",
+  "createdAtUtc": "2026-03-01T00:00:00+00:00"
+}
+```
+
+### List explores
+- method: `GET`
+- url: `/catalog/explores?categoryId=&search=&page=1&pageSize=20`
+- auth: none
+- request type: query string only
+
+Query params:
+- `categoryId`: optional GUID
+- `search`: optional string
+- `page`: optional, default `1`
+- `pageSize`: optional, default `20`
+
+Success `200`:
+```json
+{
+  "count": 20,
+  "totalCount": 1200,
+  "page": 1,
+  "pageSize": 20,
+  "items": [
+    {
+      "id": "GUID",
+      "title": "Computer Science algorithms study resource 1",
+      "description": "Curated computer science material focused on algorithms.",
+      "copyright": "docsity.com",
+      "url": "https://docsity.com/computer-science/example",
+      "categoryId": "GUID",
+      "downloads": 55,
+      "createdAtUtc": "2026-03-01T00:00:00+00:00",
+      "updatedAtUtc": "2026-03-01T00:00:00+00:00"
+    }
+  ]
+}
+```
+
+### Get explore by id
+- method: `GET`
+- url: `/catalog/explores/{exploreId}`
+- auth: none
+
+Success `200`: same item shape as `items[]` from list explores
+
+## Projects
+
+### List projects
+- method: `GET`
+- url: `/projects?search=&page=1&pageSize=20`
+- auth: required
+- request type: query string only
+
+Query params:
+- `search`: optional string
+- `page`: default `1`
+- `pageSize`: default `20`, max `100`
+
+Success `200`:
+```json
+{
+  "count": 1,
+  "page": 1,
+  "pageSize": 20,
+  "items": [
+    {
+      "id": "GUID",
+      "title": "Biology Revision",
+      "description": "WAEC prep",
+      "icon": 1,
+      "color": "10B981",
       "start": "2026-02-22T10:00:00+00:00",
       "end": "2026-06-30T18:00:00+00:00",
       "ownerUserId": "GUID",
       "librariesCount": 2,
-      "notesCount": 3,
+      "notesCount": 1,
       "libraryIds": ["GUID", "GUID"],
       "progressScore": 41.32,
       "progressLevel": 41,
@@ -226,23 +408,26 @@ Success:
       "updatedAtUtc": "2026-02-25T19:33:34.224083+00:00",
       "createdAtUtc": "2026-02-25T19:24:53.878909+00:00"
     }
-  ],
-  "totalCount": 1,
-  "page": 1,
-  "pageSize": 20
+  ]
 }
 ```
 
-Use `progressLevel` for progress bars on project cards.
-No extra per-project progress request is needed for list views.
+Use:
+- `progressLevel` for project card progress bars
+- `libraryIds` to know currently attached libraries
 
 ### Get project by id
-`GET /projects/{projectId}`
+- method: `GET`
+- url: `/projects/{projectId}`
+- auth: required
 
-Success shape matches a single item from list response.
+Success `200`: same object shape as one item from project list
 
 ### Create project
-`POST /projects`
+- method: `POST`
+- url: `/projects`
+- auth: required
+- content type: `application/json`
 
 Request:
 ```json
@@ -257,186 +442,293 @@ Request:
 }
 ```
 
+Notes:
+- `description` optional
+- `icon` optional, defaults internally
+- `color` must be 6-char hex, `#` optional
+- `libraryIds` optional
+
+Success `201`: project object
+
 ### Update project
-`PATCH /projects/{projectId}`
+- method: `PATCH`
+- url: `/projects/{projectId}`
+- auth: required
+- content type: `application/json`
 
-Merge libraries by default:
+Request:
 ```json
 {
+  "projectId": "GUID",
   "title": "Updated title",
-  "libraryIds": ["NEW-LIBRARY-GUID"]
+  "description": "Updated description",
+  "icon": 2,
+  "color": "FF5733",
+  "start": "2026-02-22T10:00:00Z",
+  "end": "2026-07-30T18:00:00Z",
+  "libraryIds": ["GUID", "GUID"],
+  "replaceLibraries": false
 }
 ```
-
-Replace libraries explicitly:
-```json
-{
-  "libraryIds": ["ONLY-THIS-GUID"],
-  "replaceLibraries": true
-}
-```
-
-### Delete project
-`DELETE /projects/{projectId}`
-
-## Project library helper routes
-
-### List libraries already in a project
-`GET /projects/{projectId}/libraries?page=1&pageSize=20&search=&filter=All`
-
-`filter` values:
-- `All`
-- `NotesOnly`
-- `ExcludeNotes`
-
-### List available libraries for attaching
-`GET /projects/available-libraries?projectId={projectId}&page=1&pageSize=20&search=&filter=All`
-
-## Explore catalog routes
-
-Purpose:
-- students can search external learning resources by title/description
-- examples include resource links shaped around sites like `docsity.com`, `edubirdie.com`, `researchhub.com`, `studocu.com`, `academia.edu`
-- catalog is pre-seeded on startup with a large default dataset
-
-### List categories
-`GET /catalog/categories?page=1&pageSize=20&search=`
-
-Success:
-```json
-{
-  "count": 12,
-  "totalCount": 12,
-  "page": 1,
-  "pageSize": 20,
-  "items": [
-    {
-      "id": "GUID",
-      "name": "Biology",
-      "description": "Biology notes, laboratory reports, cellular biology, ecology and genetics.",
-      "createdAtUtc": "2026-02-28T20:00:00+00:00"
-    }
-  ]
-}
-```
-
-### Get category by id
-`GET /catalog/categories/{categoryId}`
-
-### List explores
-`GET /catalog/explores?page=1&pageSize=20&search=&categoryId=`
-
-Success:
-```json
-{
-  "count": 20,
-  "totalCount": 1200,
-  "page": 1,
-  "pageSize": 20,
-  "items": [
-    {
-      "id": "GUID",
-      "title": "Biology cell biology study resource 1",
-      "description": "Curated biology material focused on cell biology, unit 1, exam prep, revision, and assignment support.",
-      "copyright": "docsity.com",
-      "url": "https://docsity.com/biology/biology-cell-biology-study-resource-1",
-      "categoryId": "GUID",
-      "downloads": 231,
-      "createdAtUtc": "2026-02-28T20:00:00+00:00",
-      "updatedAtUtc": "2026-02-28T20:00:00+00:00"
-    }
-  ]
-}
-```
-
-Search behavior:
-- `search` matches `title` and `description`
-- `categoryId` filters explores to one category
-- frontend can combine both
-
-### Get explore by id
-`GET /catalog/explores/{exploreId}`
-
-### Admin create category
-`POST /catalog/categories`
-
-### Admin update category
-`PATCH /catalog/categories/{categoryId}`
-
-### Admin delete category
-`DELETE /catalog/categories/{categoryId}`
-
-### Admin create explore
-`POST /catalog/explores`
-
-### Admin update explore
-`PATCH /catalog/explores/{exploreId}`
-
-### Admin delete explore
-`DELETE /catalog/explores/{exploreId}`
-
-Admin mutation routes require admin role.
-
-## Library routes
-
-### Create library item
-For notes/urls, JSON body is used.
-For docs, multipart upload is typically required.
-
-Common create fields:
-- `title`
-- `type`
-- `content` for notes
-- `url` for urls
-- `file` for docs upload
 
 Important:
-- docs creation/update is now plan-limited
-- if the user exceeds document/page quota, API returns `403`
+- this is partial update
+- send only fields to change
+- if `libraryIds` is sent and `replaceLibraries = false`, backend merges new ids with existing attached libraries
+- if `replaceLibraries = true`, backend replaces all attached libraries with the passed ids
+
+Success `200`: updated project object
+
+### Delete project
+- method: `DELETE`
+- url: `/projects/{projectId}`
+- auth: required
+
+Success `200`:
+```json
+{
+  "message": "Project deleted."
+}
+```
+
+### List project libraries
+- method: `GET`
+- url: `/projects/{projectId}/libraries?search=&filter=all&page=1&pageSize=20`
+- auth: required
+- request type: query string only
+
+Query params:
+- `search`: optional string
+- `filter`: optional string, use values like `all`, `notes`, `exclude-notes`
+- `page`: default `1`
+- `pageSize`: default `20`
+
+Success `200`:
+```json
+{
+  "count": 3,
+  "page": 1,
+  "pageSize": 20,
+  "items": [
+    {
+      "id": "GUID",
+      "title": "Chapter 1 Notes",
+      "docsUrl": "",
+      "url": "",
+      "content": "....",
+      "ownerUserId": "GUID",
+      "isDeleted": false,
+      "libraryItemType": "Note",
+      "updatedAtUtc": "2026-03-01T00:00:00+00:00",
+      "createdAtUtc": "2026-03-01T00:00:00+00:00"
+    }
+  ]
+}
+```
+
+### List available libraries for project attachment
+- method: `GET`
+- url: `/projects/available-libraries?projectId=&search=&filter=exclude-notes&page=1&pageSize=20`
+- auth: required
+
+Use this endpoint when attaching libraries to projects.
+
+Query params:
+- `projectId`: optional GUID, used to exclude items already attached to that project
+- `search`: optional string
+- `filter`: optional string, default behavior excludes notes
+- `page`: default `1`
+- `pageSize`: default `20`
+
+Success `200`: same shape as project libraries list
+
+## Library Items
+
+This section matters because request type changes based on whether you are uploading a file.
+
+Library type values:
+- `Docs`
+- `Url`
+- `Note`
+
+For JSON responses the backend returns `libraryItemType`.
 
 ### List library items
-`GET /library/items?page=1&pageSize=20&search=&type=`
+- method: `GET`
+- url: `/library/items?search=&type=&page=1&pageSize=20`
+- auth: required
+- request type: query string only
 
-If `type` is omitted, all types are returned.
+Query params:
+- `search`: optional string
+- `type`: optional, one of `Docs`, `Url`, `Note`
+- `page`: default `1`
+- `pageSize`: default `20`
 
-### Get library item
-`GET /library/items/{libraryId}`
+Important:
+- if `type` is omitted, backend returns all types
+- do not send request body for this route
+
+Success `200`:
+```json
+{
+  "count": 5,
+  "page": 1,
+  "pageSize": 20,
+  "items": [
+    {
+      "id": "GUID",
+      "title": "My note",
+      "docsUrl": "",
+      "url": "",
+      "content": "study content",
+      "ownerUserId": "GUID",
+      "isDeleted": false,
+      "libraryItemType": "Note",
+      "updatedAtUtc": "2026-03-01T00:00:00+00:00",
+      "createdAtUtc": "2026-03-01T00:00:00+00:00"
+    }
+  ]
+}
+```
+
+### Get library item by id
+- method: `GET`
+- url: `/library/items/{libraryItemId}`
+- auth: required
+
+Success `200`: single library item object
+
+### Create library item
+- method: `POST`
+- url: `/library/create`
+- auth: required
+- content type: `multipart/form-data`
+
+This route should be sent as `FormData`, not JSON.
+
+Fields:
+- `Title`: required string
+- `Type`: required string enum: `Note`, `Url`, `Docs`
+- `Content`: required for `Note`
+- `Url`: required for `Url`
+- `File`: required for `Docs`
+
+Examples:
+
+Create note:
+```ts
+const form = new FormData();
+form.append("Title", "Cell Biology Notes");
+form.append("Type", "Note");
+form.append("Content", "Introduction to cells...");
+```
+
+Create link:
+```ts
+const form = new FormData();
+form.append("Title", "Research article");
+form.append("Type", "Url");
+form.append("Url", "https://researchhub.com/example");
+```
+
+Create document:
+```ts
+const form = new FormData();
+form.append("Title", "Lecture PDF");
+form.append("Type", "Docs");
+form.append("File", selectedFile);
+```
+
+Success `201`:
+```json
+{
+  "id": "GUID",
+  "title": "Lecture PDF",
+  "docsUrl": "/uploads/....pdf",
+  "url": "",
+  "content": "",
+  "ownerUserId": "GUID",
+  "isDeleted": false,
+  "libraryItemType": "Docs",
+  "updatedAtUtc": "2026-03-01T00:00:00+00:00",
+  "createdAtUtc": "2026-03-01T00:00:00+00:00"
+}
+```
+
+Common `400` causes on `/library/create`:
+- sent JSON instead of `multipart/form-data`
+- sent `type` in lowercase or wrong field casing for form-data
+- `Type=Note` without `Content`
+- `Type=Url` without valid `Url`
+- `Type=Docs` without `File`
 
 ### Update library item
-`PATCH /library/items/{libraryId}`
+- method: `PATCH`
+- url: `/library/items/{libraryItemId}`
+- auth: required
+- content type: `multipart/form-data`
 
-Partial update is supported.
+This route is also `FormData` if a file may be included.
+
+Fields:
+- `LibraryItemId`: required GUID
+- `Title`: optional
+- `Type`: optional `Docs|Url|Note`
+- `Content`: optional
+- `Url`: optional
+- `File`: optional
+
+Example:
+```ts
+const form = new FormData();
+form.append("LibraryItemId", libraryId);
+form.append("Content", "Updated note content");
+```
+
+Success `200`: updated library item object
 
 ### Delete library item
-`DELETE /library/items/{libraryId}`
+- method: `DELETE`
+- url: `/library/items/{libraryItemId}`
+- auth: required
 
-## Adaptive AI routes
-These are the routes frontend should use for learning features.
+Current implementation:
+- status code is set to `204`
+- but response body may still include a message
 
-### 1. Start question generation
-`POST /projects/{projectId}/adaptive/questions`
+Frontend-safe handling:
+- treat `204` as success
+- do not depend on a JSON body for this route
 
-Random source selection:
+## Adaptive AI Flow
+
+These are the routes the frontend should use for learning features.
+
+### Step 1: submit adaptive question job
+- method: `POST`
+- url: `/projects/{projectId}/adaptive/questions`
+- auth: required
+- content type: `application/json`
+
+Request:
 ```json
 {
+  "projectId": "GUID",
   "numberOfQuestions": 10,
+  "focusArea": "Scientific Method and Experimental Design",
+  "additionalInstructions": "Focus on weak areas",
   "sourceMode": "random",
-  "focusArea": "Scientific Method",
-  "additionalInstructions": "Focus on weak areas"
+  "libraryItemId": null
 }
 ```
 
-Single library source:
-```json
-{
-  "numberOfQuestions": 10,
-  "sourceMode": "single",
-  "libraryItemId": "GUID",
-  "focusArea": "Scientific Method"
-}
-```
+Rules:
+- `numberOfQuestions` allowed: `5, 10, 15, 20, 25, 30`
+- `sourceMode` allowed: `random`, `single`
+- if `sourceMode = "single"`, `libraryItemId` is required
 
-Success (`202 Accepted`):
+Success `202`:
 ```json
 {
   "projectId": "GUID",
@@ -446,42 +738,43 @@ Success (`202 Accepted`):
   "sourceLibraryCount": 3,
   "sourceLibraryIds": ["GUID", "GUID"],
   "inferredDifficulty": "medium",
-  "complexityLevel": 6,
-  "distributionProfile": "multiple-choice=5;short-answer=3;essay=2",
-  "progressScore": 31.5,
-  "progressLevel": 32,
+  "complexityLevel": 42,
+  "distributionProfile": "mixed:mcq=5,short=2,essay=2,reasoning=1",
+  "progressScore": 37.2,
+  "progressLevel": 37,
   "modelVersion": "adaptive-progress-v2"
 }
 ```
 
-Important:
-- question generation is quota-limited by subscription
-- if `sourceMode = "single"`, `libraryItemId` is required
+### Step 2: poll job status
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/questions/status/{jobId}`
+- auth: required
 
-### 2. Poll question generation status
-`GET /projects/{projectId}/adaptive/questions/status/{jobId}`
-
-Success:
+Success `200`:
 ```json
 {
   "jobId": "GUID",
   "status": "running",
-  "progress": 10,
+  "progress": 60,
   "message": "Generating questions",
-  "createdAtUtc": "2026-02-25T21:00:00+00:00",
+  "createdAtUtc": "2026-03-01T11:00:00+00:00",
   "completedAtUtc": null
 }
 ```
 
-Important:
-- essay grading quota is enforced here
-- this is the recommended route for grading all answers once
+### Step 3: get job result
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/questions/result/{jobId}`
+- auth: required
 
-### 3. Fetch question generation result
-`GET /projects/{projectId}/adaptive/questions/result/{jobId}`
+If still processing:
+- status `202`
 
-Pending/running may return `202` with same shape.
-Completed response:
+If finished:
+- status `200`
+
+Finished response:
 ```json
 {
   "jobId": "GUID",
@@ -489,216 +782,371 @@ Completed response:
   "questions": [
     {
       "id": "1",
-      "question": "What is osmosis?",
+      "question": "What is a hypothesis?",
+      "type": "multiple-choice",
+      "options": ["A", "B", "C", "D"],
+      "answer": "A",
+      "difficulty": "medium",
+      "reason": "A hypothesis is a testable explanation based on observations.",
+      "correctAnswers": null,
+      "rubric": null
+    },
+    {
+      "id": "2",
+      "question": "State one purpose of a control group.",
       "type": "short-answer",
       "options": null,
-      "answer": "movement of water across a semipermeable membrane",
-      "reason": "This definition matches the source concept.",
-      "difficulty": "easy",
-      "correctAnswers": [
-        "movement of water across a semipermeable membrane"
-      ],
+      "answer": null,
+      "difficulty": "medium",
+      "reason": "A control group provides a baseline for comparison.",
+      "correctAnswers": ["baseline comparison", "comparison standard"],
       "rubric": null
     }
   ],
-  "message": "Completed"
+  "message": "Questions generated successfully."
 }
 ```
 
-### 4. Submit all answers for grading
-Recommended approach: keep answers in frontend state, submit once at the end.
+Question rendering rules:
+- `multiple-choice`:
+  - render `options`
+  - `answer` may exist in result payload, but do not show it to user before submission
+- `short-answer`:
+  - no options
+  - `correctAnswers` may be present
+- `essay`:
+  - no options
+  - `rubric` may be present
+- `reason`:
+  - explanation of why the answer is correct
 
-`POST /projects/{projectId}/adaptive/questions/evaluate`
+### Step 4: submit all answers for grading
+- method: `POST`
+- url: `/projects/{projectId}/adaptive/questions/evaluate`
+- auth: required
+- content type: `application/json`
+
+This is the main grading route. Use it after user finishes the whole set.
+
+Request:
+```json
+{
+  "projectId": "GUID",
+  "libraryItemId": null,
+  "attempts": [
+    {
+      "question": {
+        "id": "1",
+        "question": "What is a hypothesis?",
+        "type": "multiple-choice",
+        "options": ["A", "B", "C", "D"],
+        "answer": "A",
+        "difficulty": "medium",
+        "reason": "A hypothesis is a testable explanation.",
+        "correctAnswers": null,
+        "rubric": null
+      },
+      "userAnswer": "A"
+    },
+    {
+      "question": {
+        "id": "2",
+        "question": "State one purpose of a control group.",
+        "type": "short-answer",
+        "options": null,
+        "answer": null,
+        "difficulty": "medium",
+        "reason": "A control group provides a baseline for comparison.",
+        "correctAnswers": ["baseline comparison", "comparison standard"],
+        "rubric": null
+      },
+      "userAnswer": "It gives a baseline for comparison."
+    }
+  ]
+}
+```
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "libraryItemId": null,
+  "totalQuestions": 2,
+  "correctCount": 2,
+  "averageScore": 90,
+  "results": [
+    {
+      "questionId": "1",
+      "questionType": "multiple-choice",
+      "difficulty": "medium",
+      "userAnswer": "A",
+      "correct": true,
+      "score": 100,
+      "feedback": "Correct."
+    },
+    {
+      "questionId": "2",
+      "questionType": "short-answer",
+      "difficulty": "medium",
+      "userAnswer": "It gives a baseline for comparison.",
+      "correct": true,
+      "score": 85,
+      "feedback": "Correct. Good concise explanation."
+    }
+  ],
+  "progress": {
+    "modelVersion": "adaptive-progress-v2",
+    "progressScore": 38.54,
+    "progressLevel": 39,
+    "activityComponent": 0.22,
+    "masteryComponent": 0.41,
+    "contributingSignalsCount": 12,
+    "calculatedAtUtc": "2026-03-01T11:20:00+00:00"
+  }
+}
+```
+
+Use:
+- `results[]` to show per-question feedback
+- `progress.progressLevel` to update the project progress bar
+- `averageScore` for summary card
+
+### Current progress snapshot
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/progress`
+- auth: required
+
+Success `200`:
+```json
+{
+  "modelVersion": "adaptive-progress-v2",
+  "progressScore": 38.54,
+  "progressLevel": 39,
+  "activityComponent": 0.22,
+  "masteryComponent": 0.41,
+  "contributingSignalsCount": 12,
+  "calculatedAtUtc": "2026-03-01T11:20:00+00:00"
+}
+```
+
+### Progress report
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/progress/report`
+- auth: required
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "current": {
+    "modelVersion": "adaptive-progress-v2",
+    "progressScore": 38.54,
+    "progressLevel": 39,
+    "activityComponent": 0.22,
+    "masteryComponent": 0.41,
+    "contributingSignalsCount": 12,
+    "calculatedAtUtc": "2026-03-01T11:20:00+00:00"
+  },
+  "attemptsInLast30Days": 12,
+  "averageScoreInLast30Days": 81.4,
+  "correctAnswersInLast30Days": 20,
+  "totalAnswersInLast30Days": 27,
+  "recentSnapshots": []
+}
+```
+
+### Adaptive chat
+- method: `POST`
+- url: `/projects/{projectId}/adaptive/chat`
+- auth: required
+- content type: `application/json`
 
 Request:
 ```json
 {
   "projectId": "GUID",
   "libraryItemId": "GUID",
-  "attempts": [
-    {
-      "question": {
-        "id": "1",
-        "question": "What is osmosis?",
-        "type": "short-answer",
-        "options": null,
-        "answer": "movement of water across a semipermeable membrane",
-        "reason": "This definition matches the source concept.",
-        "difficulty": "easy",
-        "correctAnswers": [
-          "movement of water across a semipermeable membrane"
-        ],
-        "rubric": null
-      },
-      "userAnswer": "movement of water across a semipermeable membrane"
-    },
-    {
-      "question": {
-        "id": "2",
-        "question": "Explain why controlled variables matter.",
-        "type": "essay",
-        "options": null,
-        "answer": null,
-        "reason": "Evaluate explanation quality",
-        "difficulty": "medium",
-        "correctAnswers": null,
-        "rubric": ["Accuracy", "Depth", "Clarity"]
-      },
-      "userAnswer": "Controlled variables reduce confounding factors..."
-    }
-  ]
+  "sessionId": null,
+  "message": "Explain chapter two in simpler terms"
 }
 ```
 
-Success:
+Success `200`:
 ```json
 {
   "projectId": "GUID",
   "libraryItemId": "GUID",
-  "totalQuestions": 2,
-  "correctCount": 2,
-  "averageScore": 92.5,
-  "results": [
+  "chat": {
+    "sessionId": "GUID",
+    "answer": "Explanation...",
+    "citations": [
+      {
+        "chunkId": "GUID",
+        "snippet": "Relevant excerpt"
+      }
+    ]
+  },
+  "progressScore": 38.54,
+  "progressLevel": 39,
+  "modelVersion": "adaptive-progress-v2"
+}
+```
+
+## Direct AI Routes
+
+These routes still exist, but public frontend should not depend on them right now:
+- `POST /api/ai/questions`
+- `GET /api/ai/questions/status/{jobId}`
+- `GET /api/ai/questions/result/{jobId}`
+- `POST /api/ai/chat`
+
+They are usually blocked with `410 Gone`.
+
+### Verify answer
+- method: `POST`
+- url: `/api/ai/questions/verify`
+- auth: required
+- content type: `application/json`
+
+This route still works for direct single-answer verification.
+
+Request:
+```json
+{
+  "projectId": "GUID",
+  "libraryItemId": "GUID",
+  "question": {
+    "id": "1",
+    "question": "What is a hypothesis?",
+    "type": "multiple-choice",
+    "options": ["A", "B", "C", "D"],
+    "answer": "A",
+    "difficulty": "easy",
+    "reason": "A hypothesis is a testable explanation.",
+    "correctAnswers": null,
+    "rubric": null
+  },
+  "userAnswer": "A"
+}
+```
+
+Success `200`:
+```json
+{
+  "correct": true,
+  "score": 100,
+  "feedback": "Correct."
+}
+```
+
+### Generate timetable
+- method: `POST`
+- url: `/api/ai/timetable`
+- auth: required
+- content type: `application/json`
+
+Request:
+```json
+{
+  "subjects": [
+    { "name": "Math", "priority": "high" },
+    { "name": "Physics", "priority": "medium" }
+  ],
+  "studyHoursPerDay": 6,
+  "breakMinutes": 15,
+  "studyStyle": "balanced",
+  "unavailableSlots": [
+    { "day": "Mon", "start": "18:00", "end": "20:00" }
+  ],
+  "deadlines": [
+    { "type": "exam", "subject": "Math", "date": "2026-03-01" }
+  ],
+  "startDate": "2026-02-23",
+  "endDate": "2026-03-02"
+}
+```
+
+Success `200`:
+```json
+{
+  "schedule": [
     {
-      "questionId": "1",
-      "questionType": "short-answer",
-      "difficulty": "easy",
-      "userAnswer": "movement of water across a semipermeable membrane",
-      "correct": true,
-      "score": 100,
-      "feedback": "Correct answer"
-    },
-    {
-      "questionId": "2",
-      "questionType": "essay",
-      "difficulty": "medium",
-      "userAnswer": "Controlled variables reduce confounding factors...",
-      "correct": true,
-      "score": 85,
-      "feedback": "Good explanation, include one concrete experiment example."
+      "date": "2026-02-23",
+      "day": "Sun",
+      "blocks": [
+        { "subject": "Math", "start": "09:00", "end": "10:30", "type": "study" },
+        { "subject": null, "start": "10:30", "end": "10:45", "type": "break" }
+      ]
     }
   ],
-  "progress": {
-    "modelVersion": "adaptive-progress-v2",
-    "progressScore": 43.12,
-    "progressLevel": 43,
-    "activityComponent": 0.31,
-    "masteryComponent": 0.44,
-    "contributingSignalsCount": 9,
-    "calculatedAtUtc": "2026-02-25T21:00:00+00:00"
+  "notes": "Deadline-aware schedule generated.",
+  "validation": {
+    "isValid": true,
+    "daysValidated": 8,
+    "failedRules": 0,
+    "allocationDeviationPercent": 0.0,
+    "repairAttempts": 0
   }
 }
 ```
 
-Frontend use:
-- show `results[]` for each answer row
-- show `averageScore` for summary
-- update project progress bar from `progress.progressLevel`
+## Frontend Request Examples
 
-### 5. Get current progress report
-`GET /projects/{projectId}/adaptive/progress/report`
+### JSON request helper
+```ts
+async function apiJson<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem("accessToken");
 
-Success:
-```json
-{
-  "projectId": "GUID",
-  "current": {
-    "modelVersion": "adaptive-progress-v2",
-    "progressScore": 43.12,
-    "progressLevel": 43,
-    "activityComponent": 0.31,
-    "masteryComponent": 0.44,
-    "contributingSignalsCount": 9,
-    "calculatedAtUtc": "2026-02-25T21:00:00+00:00"
-  },
-  "attemptsInLast30Days": 12,
-  "averageScoreInLast30Days": 74.8,
-  "correctAnswersInLast30Days": 8,
-  "totalAnswersInLast30Days": 12,
-  "recentSnapshots": []
+  const res = await fetch(`http://localhost:5296${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {})
+    }
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw error ?? { error: `Request failed with ${res.status}` };
+  }
+
+  return res.json();
 }
 ```
 
-### 6. Lightweight progress read
-`GET /projects/{projectId}/adaptive/progress`
+### Multipart request helper for library upload
+```ts
+async function apiForm<T>(path: string, form: FormData): Promise<T> {
+  const token = localStorage.getItem("accessToken");
 
-Use this only when you need just the current score without analytics.
+  const res = await fetch(`http://localhost:5296${path}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form
+  });
 
-## Error response patterns
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw error ?? { error: `Request failed with ${res.status}` };
+  }
 
-### Validation / business rule error
-Usually `400`:
-```json
-{
-  "error": "libraryItemId is required when sourceMode is 'single'."
+  return res.json();
 }
 ```
 
-### Forbidden / subscription limit
-`403`:
-```json
-{
-  "error": "Question quota exceeded for plan 'Free'.",
-  "code": "Forbidden"
-}
-```
+Important:
+- do not manually set `Content-Type` for `FormData`
+- browser will set the proper multipart boundary
 
-Or for some feature slices:
-```json
-{
-  "error": "Project not found.",
-  "code": "NotFound"
-}
-```
+## Known Backend Behaviors
 
-### Unauthorized
-`401`:
-```json
-{
-  "error": "Unauthorized"
-}
-```
-
-### Not found
-`404`:
-```json
-{
-  "error": "Project not found"
-}
-```
-
-### Question job not ready
-`202` from result endpoint:
-```json
-{
-  "jobId": "GUID",
-  "status": "running",
-  "questions": null,
-  "message": "Generating questions"
-}
-```
-
-## Recommended frontend polling strategy
-For question generation:
-1. submit generation request
-2. save `jobId`
-3. poll `/status/{jobId}` every 2 to 3 seconds
-4. when status is `completed`, call `/result/{jobId}` once
-5. stop polling on `completed` or `failed`
-
-## Recommended frontend state strategy
-For quizzes:
-1. fetch generated questions
-2. store full question objects client-side
-3. store user answers locally as they type/select
-4. do not call backend per answer by default
-5. call evaluate endpoint once on submit
-6. update dashboard/project cards from returned progress or refetch `/projects`
-
-## Development/testing behavior
-Current config enables unlimited access in development by default.
-
-That means:
-- your local test account will not be throttled
-- plan metadata still exists and can still be shown in UI
-- production can disable this with config
+- `GET /library/items` expects query params, not request body
+- `POST /library/create` expects `multipart/form-data`, not JSON
+- `PATCH /library/items/{id}` is partial update
+- direct AI question/chat routes are suspended
+- adaptive question flow is job-based:
+  1. submit job
+  2. poll status
+  3. fetch result
+  4. submit all answers once for grading

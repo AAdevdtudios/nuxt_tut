@@ -1,31 +1,34 @@
-import { getQuery, createError } from "h3";
+import { createError, getQuery } from "h3";
 import { useApi } from "../utils/api";
+import { normalizeCategoriesResponse } from "../utils/explore";
+import type { CategoriesResponse } from "~/types/explore.types";
 
 export default defineEventHandler(async (event) => {
   try {
-    const data = await useApi<any>(event, "/categories", {
-      method: "GET",
-      useJwt: true,
+    const query = getQuery(event);
+    const params = new URLSearchParams({
+      Page: String(query.page || query.Page || 1),
+      PageSize: String(query.pageSize || query.PageSize || 50),
     });
 
-    return {
-      success: true,
-      data: data,
-    };
-  } catch (error: any) {
-    console.error("Error fetching categories:", error);
-
-    // Re-throw auth errors
-    if (error.status === 401) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: "Unauthorized",
-      });
+    if (typeof query.search === "string" && query.search.trim()) {
+      params.set("Search", query.search);
     }
 
-    return {
-      success: false,
-      error: error.message || "Failed to fetch categories",
-    };
+    const data = await useApi<unknown>(
+      event,
+      `/catalog/categories?${params.toString()}`,
+      {
+        method: "GET",
+        useJwt: false,
+      },
+    );
+
+    return normalizeCategoriesResponse(data) as CategoriesResponse;
+  } catch (error: any) {
+    throw createError({
+      statusCode: error.status || 500,
+      statusMessage: error.message || "Failed to fetch categories",
+    });
   }
 });

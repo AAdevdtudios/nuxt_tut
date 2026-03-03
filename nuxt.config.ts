@@ -24,7 +24,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     API_TOKEN_KEY: process.env.API_TOKEN_KEY,
-    API_BASE_URL: process.env.API_BASE_URL,
+    API_BASE_URL: process.env.API_BASE_URL || "http://localhost:5296",
   },
   // nitro: {
   //   prerender: {

@@ -55,7 +55,7 @@ export const ProjectCreateSchema = z.object({
     .string()
     .datetime()
     .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
-  libraries: z.array(z.union([z.string(), z.number()])).optional(),
+  libraries: z.array(z.string().uuid()).optional(),
 });
 
 export type ProjectCreate = z.infer<typeof ProjectCreateSchema>;
@@ -90,7 +90,7 @@ export const ProjectUpdateSchema = z.object({
     .datetime()
     .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .optional(),
-  libraries: z.array(z.union([z.string(), z.number()])).optional(),
+  libraries: z.array(z.string().uuid()).optional(),
 });
 
 export type ProjectUpdate = z.infer<typeof ProjectUpdateSchema>;
@@ -99,7 +99,7 @@ export type ProjectUpdate = z.infer<typeof ProjectUpdateSchema>;
  * Library item in project context (subset of full library data)
  */
 export const ProjectLibrarySchema = z.object({
-  id: z.number(),
+  id: z.string(),
   documentId: z.string(),
   title: z.string(),
   url: z.string().nullable().optional(),
@@ -118,7 +118,7 @@ export type ProjectLibrary = z.infer<typeof ProjectLibrarySchema>;
  * Project response schema (from Strapi)
  */
 export const ProjectItemSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   documentId: z.string(),
   title: z.string(),
   description: z.string().nullable().optional(),

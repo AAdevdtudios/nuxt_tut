@@ -5,6 +5,8 @@
 .nitro
 .cache
 dist
+coverage
+*.tsbuildinfo
 
 # Node dependencies
 node_modules
@@ -12,16 +14,38 @@ node_modules
 # Logs
 logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Misc
 .DS_Store
 .fleet
 .idea
+.temp
+.tmp
 
 # Local env files
 .env
 .env.*
 !.env.example
+
+# Editor settings
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Test artifacts
+playwright-report
+test-results
+
+# Package manager files
+.pnpm-store
+
+# Documentation scratch files
 BEFORE_AFTER_COMPARISON.md
 DOCUMENTATION_INDEX.md
 IMPLEMENTATION_CHECKLIST.md
@@ -32,7 +56,6 @@ TESTING_INSTRUCTIONS.md
 TODO.md
 UPGRADE_GUIDE.md
 VERSION_HISTORY.md
-REFACTORING_COMPLETE.md
 REFACTORING_SUMMARY.md
 ADDPROJECT_MODAL_IMPLEMENTATION.md
 LIBRARY_INTEGRATION_GUIDE.md

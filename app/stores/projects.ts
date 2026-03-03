@@ -20,7 +20,7 @@ import type {
 } from "~/types/project.types";
 
 export interface NormalizedProject {
-  id: number;
+  id: string;
   documentId: string;
   title: string;
   description?: string | null;
@@ -31,12 +31,14 @@ export interface NormalizedProject {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
-  libraryIds: (string | number)[]; // Only store IDs, not full objects
+  libraryIds: string[]; // Only store IDs, not full objects
   librariesCount: number;
   notesCount: number;
 }
 
 export const useProjectStore = defineStore("projects", () => {
+  const { $api } = useNuxtApp();
+
   // State: Projects by documentId for quick lookup
   const projectsById = ref<Record<string, NormalizedProject>>({});
 
@@ -84,7 +86,9 @@ export const useProjectStore = defineStore("projects", () => {
         query.append("search", search);
       }
 
-      const response = await $fetch<any>(`/api/projects?${query.toString()}`);
+      const response = await $api.fetch<any>(`/api/projects?${query.toString()}`, {
+        method: "GET",
+      });
 
       if (!response?.data) throw new Error("Invalid response structure");
 
@@ -117,7 +121,9 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<any>(`/api/projects/${documentId}`);
+      const response = await $api.fetch<any>(`/api/projects/${documentId}`, {
+        method: "GET",
+      });
 
       if (!response?.data) throw new Error("Invalid response structure");
 
@@ -141,7 +147,7 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<any>("/api/projects", {
+      const response = await $api.mutate<any>("/api/projects", {
         method: "POST",
         body: payload,
       });
@@ -172,7 +178,7 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<any>(`/api/projects/${documentId}`, {
+      const response = await $api.mutate<any>(`/api/projects/${documentId}`, {
         method: "PUT",
         body: payload,
       });
@@ -200,7 +206,7 @@ export const useProjectStore = defineStore("projects", () => {
       isLoading.value = true;
       error.value = null;
 
-      await $fetch(`/api/projects/${documentId}`, {
+      await $api.mutate(`/api/projects/${documentId}`, {
         method: "DELETE",
       });
 
@@ -267,11 +273,13 @@ export const useProjectStore = defineStore("projects", () => {
  */
 export function normalizeProject(project: any): NormalizedProject {
   const libraries = project.libraries || [];
-  const libraryIds = libraries.map((lib: any) => lib.id || lib.documentId);
+  const libraryIds = libraries
+    .map((lib: any) => String(lib.id || lib.documentId || ""))
+    .filter(Boolean);
 
   return {
-    id: project.id,
-    documentId: project.documentId,
+    id: String(project.id || project.documentId || ""),
+    documentId: String(project.documentId || project.id || ""),
     title: project.title,
     description: project.description,
     icons: project.icons,

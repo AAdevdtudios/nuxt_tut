@@ -13,7 +13,7 @@
  * - Open/Closed: Easy to extend functionality
  */
 
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import type { Ref, ComputedRef } from "vue";
 import type {
   Category,
@@ -22,7 +22,6 @@ import type {
   ExploresQueryParams,
   CategoriesResponse,
   ExploresResponse,
-  DEFAULT_PAGE_SIZE,
 } from "~/types/explore.types";
 import { DEFAULT_CATEGORY } from "~/types/explore.types";
 import { ExploreService } from "~/services/exploreService";
@@ -57,7 +56,7 @@ export interface UseExploreReturn {
   // Actions
   fetchExplores(): Promise<void>;
   fetchCategories(): Promise<void>;
-  selectCategory(slug: string): void;
+  selectCategory(categoryId: string): void;
   search(query: string): void;
   openExplore(url: string): void;
   formatDownloads(downloads: string | number): string;
@@ -78,6 +77,7 @@ export interface UseExploreReturn {
 export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
   // Services
   const service = new ExploreService();
+  const { $api } = useNuxtApp();
 
   // State
   const explores = ref<Explore[]>([]);
@@ -118,27 +118,32 @@ export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
         page: pagination.page.value,
         pageSize: pagination.pageSize.value,
         search: searchQuery.value || undefined,
-        category:
+        categoryId:
           selectedCategory.value !== DEFAULT_CATEGORY
             ? selectedCategory.value
             : undefined,
       };
 
-      const response = await $fetch<ExploresResponse>("/api/explores", {
-        params: {
+      const response = await $api.fetch<ExploresResponse>("/api/explores", {
+        method: "GET",
+        query: {
           page: params.page,
           pageSize: params.pageSize,
           ...(params.search && { search: params.search }),
-          ...(params.category && { category: params.category }),
+          ...(params.categoryId && { categoryId: params.categoryId }),
         },
       });
 
-      if (!response.success) {
-        throw new Error("Failed to fetch explores");
-      }
-
-      explores.value = response.data.items || [];
-      pagination.updatePagination(response.data.pagination);
+      explores.value = response.items || [];
+      pagination.updatePagination({
+        page: response.page,
+        pageSize: response.pageSize,
+        pageCount: Math.max(
+          1,
+          Math.ceil(response.totalCount / Math.max(1, response.pageSize)),
+        ),
+        total: response.totalCount,
+      });
 
       options.onSuccess?.("Explores loaded successfully");
     } catch (err) {
@@ -160,13 +165,11 @@ export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
       loading.value = true;
       error.value = null;
 
-      const response = await $fetch<CategoriesResponse>("/api/categories");
+      const response = await $api.fetch<CategoriesResponse>("/api/categories", {
+        method: "GET",
+      });
 
-      if (!response.success) {
-        throw new Error("Failed to fetch categories");
-      }
-
-      categories.value = response.data.data || [];
+      categories.value = response.items || [];
 
       options.onSuccess?.("Categories loaded successfully");
     } catch (err) {
@@ -182,10 +185,10 @@ export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
 
   /**
    * Selects a category and resets pagination
-   * @param slug - Category slug to select
+   * @param categoryId - Category id to select
    */
-  const selectCategory = (slug: string): void => {
-    selectedCategory.value = slug;
+  const selectCategory = (categoryId: string): void => {
+    selectedCategory.value = categoryId;
     pagination.resetPage();
     fetchExplores();
   };
@@ -229,12 +232,6 @@ export function useExplore(options: UseExploreOptions = {}): UseExploreReturn {
       throw err;
     }
   };
-
-  // Watchers for reactive updates
-  watch([searchQuery, selectedCategory], () => {
-    pagination.resetPage();
-    fetchExplores();
-  });
 
   return {
     // State

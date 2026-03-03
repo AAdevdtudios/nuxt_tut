@@ -12,19 +12,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    console.log("[projects.delete] Deleting project:", documentId);
-
-    const response = await useApi(event, `/projects/${documentId}`, {
+    await useApi(event, `/projects/${documentId}`, {
       method: "DELETE",
       useJwt: true,
     });
 
-    console.log("[projects.delete] Delete response:", response);
-
     return { success: true, message: "Project deleted successfully" };
   } catch (error: any) {
-    console.error("[projects.delete] Error:", error);
-
     throw createError({
       statusCode: error.status || 500,
       statusMessage: error.message || "Failed to delete project",

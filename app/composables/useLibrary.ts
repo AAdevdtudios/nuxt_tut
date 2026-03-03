@@ -17,8 +17,6 @@ import type {
   LibraryCreateRequest,
   LibraryUpdateRequest,
   LibrarySingleResponse,
-  UploadResponse,
-  ApiError,
 } from "~/types";
 import { usePagination } from "./usePagination";
 import { LibraryService } from "~/services/libraryService";
@@ -35,6 +33,39 @@ export interface ApiValidationError {
 
 export function useLibrary(options: UseLibraryOptions = {}) {
   const service = new LibraryService();
+  const { $api } = useNuxtApp();
+
+  const toFormData = (
+    payload: LibraryCreateRequest | LibraryUpdateRequest,
+  ): FormData => {
+    const formData = new FormData();
+
+    if (payload.title !== undefined) formData.append("title", payload.title);
+    if (payload.libraryType !== undefined) {
+      formData.append("type", payload.libraryType);
+      formData.append("libraryType", payload.libraryType);
+    }
+    if (payload.url !== undefined && payload.url !== null) {
+      formData.append("url", payload.url);
+    }
+    if (payload.content !== undefined && payload.content !== null) {
+      formData.append("content", payload.content);
+    }
+    if (payload.docID !== undefined && payload.docID !== null) {
+      formData.append("docID", String(payload.docID));
+    }
+    if ("libUUID" in payload && payload.libUUID) {
+      formData.append("libUUID", payload.libUUID);
+    }
+    if ("locale" in payload && payload.locale) {
+      formData.append("locale", payload.locale);
+    }
+    if (payload.file) {
+      formData.append("file", payload.file);
+    }
+
+    return formData;
+  };
 
   // Pagination
   const pagination = usePagination(); // Default page size: 25 (matches Strapi default)
@@ -110,8 +141,8 @@ export function useLibrary(options: UseLibraryOptions = {}) {
         params.libraryType = selectedLibraryType.value;
       }
 
-      const queryString = new URLSearchParams(params).toString();
-      const response = await $fetch<LibrariesResponse>("/api/libraries", {
+      const response = await $api.fetch<LibrariesResponse>("/api/libraries", {
+        method: "GET",
         query: params,
       });
 
@@ -143,8 +174,11 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<LibrarySingleResponse>(
+      const response = await $api.fetch<LibrarySingleResponse>(
         `/api/libraries/${documentId}`,
+        {
+          method: "GET",
+        },
       );
 
       if (!response?.data) {
@@ -174,11 +208,10 @@ export function useLibrary(options: UseLibraryOptions = {}) {
     try {
       isLoading.value = true;
       error.value = null;
-      console.log(payload);
 
-      await $fetch<LibrarySingleResponse>("/api/libraries", {
+      await $api.mutate<LibrarySingleResponse>("/api/libraries", {
         method: "POST",
-        body: payload,
+        body: toFormData(payload),
       });
 
       options.onSuccess?.("Library created successfully");
@@ -208,11 +241,11 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<LibrarySingleResponse>(
+      const response = await $api.mutate<LibrarySingleResponse>(
         `/api/libraries/${documentId}`,
         {
           method: "PUT",
-          body: payload,
+          body: toFormData(payload),
         },
       );
 
@@ -243,7 +276,7 @@ export function useLibrary(options: UseLibraryOptions = {}) {
       isLoading.value = true;
       error.value = null;
 
-      await $fetch(`/api/libraries/${documentId}`, {
+      await $api.mutate(`/api/libraries/${documentId}`, {
         method: "DELETE",
       });
 
@@ -296,46 +329,6 @@ export function useLibrary(options: UseLibraryOptions = {}) {
     service.openLibraryUrl(url);
   };
 
-  /**
-   * Uploads a file to Strapi and returns the file ID
-   * @param file - File to upload
-   * @returns Promise with uploaded file ID
-   */
-  const uploadFile = async (file: File): Promise<number> => {
-    try {
-      isLoading.value = true;
-      error.value = null;
-
-      const formData = new FormData();
-      formData.append("files", file);
-
-      const response = await $fetch<UploadResponse>("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response || response.length === 0) {
-        throw new Error("No file returned from upload");
-      }
-
-      const uploadedFile = response?.[0];
-      if (!uploadedFile) {
-        throw new Error("Invalid upload response");
-      }
-
-      return uploadedFile.id;
-    } catch (err) {
-      const { message, details } = normalizeError(err);
-      error.value = message;
-      validationErrors.value = details.map((d) => ({ message: d }));
-      options.onError?.(message, details);
-      console.error("[useLibrary] uploadFile error:", err);
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
   // Watch for pagination changes and re-fetch
   watch(
     () => pagination.page.value,
@@ -379,7 +372,6 @@ export function useLibrary(options: UseLibraryOptions = {}) {
     selectLibraryType,
     search,
     initialize,
-    uploadFile,
     openLibraryUrl,
     normalizeError,
   };

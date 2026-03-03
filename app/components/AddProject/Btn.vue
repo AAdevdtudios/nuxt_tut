@@ -72,8 +72,6 @@ const contentTypes = [
 ];
 
 const handleBtnSelect = (type: string) => {
-  console.log(type);
-
   if (type === "explore") {
     isOpen.value = false;
     useRouter().push("/dashboard/explore");
@@ -85,18 +83,48 @@ const handleBtnSelect = (type: string) => {
 
 const handleSubmit = async () => {
   isSubmitting.value = true;
+  const libraryType = mapTypeToLibraryType(selectedType.value);
+  console.log("Selected type is:");
+
+  console.log(libraryType);
 
   try {
-    // Prepare library creation request
-    const libraryType = mapTypeToLibraryType(selectedType.value);
+    if (!libraryType) {
+      toast.add({
+        title: "Validation Error",
+        description: "Please choose a content type first",
+        color: "error",
+      });
+      isSubmitting.value = false;
+      return;
+    }
 
-    // Build request payload
     const payload: LibraryCreateRequest = {
       title: formData.value.title.trim(),
       libraryType,
     };
 
-    // Validate on client-side first
+    // Handle type-specific data
+    if (selectedType.value === "document" && formData.value.file) {
+      payload.file = formData.value.file;
+      console.log(payload.title);
+    } else if (selectedType.value === "website") {
+      try {
+        new URL(formData.value.url);
+        payload.url = formData.value.url.trim();
+      } catch {
+        toast.add({
+          title: "Validation Error",
+          description: "Please enter a valid URL",
+          color: "error",
+        });
+        isSubmitting.value = false;
+        return;
+      }
+    } else if (selectedType.value === "note") {
+      payload.content = formData.value.notes.trim();
+    }
+
     if (!validation.validateCreate(payload)) {
       validation.errors.value.forEach((err) => {
         toast.add({
@@ -109,34 +137,8 @@ const handleSubmit = async () => {
       return;
     }
 
-    // Handle type-specific data
-    if (selectedType.value === "document" && formData.value.file) {
-      // Upload document first
-      const fileId = await library.uploadFile(formData.value.file);
-      payload.docID = fileId;
-    } else if (selectedType.value === "website") {
-      // Validate URL format
-      try {
-        new URL(formData.value.url);
-        payload.url = formData.value.url;
-      } catch {
-        toast.add({
-          title: "Validation Error",
-          description: "Please enter a valid URL",
-          color: "error",
-        });
-        isSubmitting.value = false;
-        return;
-      }
-    } else if (selectedType.value === "note") {
-      // Store note content
-      payload.content = formData.value.notes;
-    }
-
-    // Create library item via API
     await library.createLibrary(payload);
 
-    // Success - show success step
     step.value = "success";
     setTimeout(() => {
       isOpen.value = false;
@@ -153,16 +155,16 @@ const handleSubmit = async () => {
 /**
  * Maps form type selection to library type enum
  */
-const mapTypeToLibraryType = (type: string | null): LibraryType => {
+const mapTypeToLibraryType = (type: string | null): LibraryType | null => {
   switch (type) {
     case "document":
-      return "doc";
+      return "docs";
     case "website":
       return "url";
     case "note":
       return "note";
     default:
-      return "note";
+      return null;
   }
 };
 
@@ -273,11 +275,6 @@ const handleClose = () => {
               label="Drop your file here"
               description="PDF, DOCX, TXT or other files (max. 1`0MB)"
               class="w-full min-h-48"
-              @change="
-                (event) => {
-                  console.log(event);
-                }
-              "
             />
             <p v-if="formData.file" class="mt-2 text-sm text-muted-foreground">
               Selected: {{ formData.file.name }}

@@ -4,16 +4,20 @@ import { envSchema, type EnvSchema } from "./env.schema";
 const rawEnv = {
   APP_NAME: process.env.APP_NAME || "GapAi App",
   APP_LOGO: process.env.APP_LOGO || "/logo.png",
-  API_BASE_URL: process.env.API_BASE_URL || "http://localhost:3000",
+  API_BASE_URL: process.env.API_BASE_URL || "http://localhost:5296",
   API_ENDPOINTS: {
     LOGIN: process.env.API_LOGIN_ENDPOINT || "/api/auth/login",
     REGISTER: process.env.API_REGISTER_ENDPOINT || "/api/auth/register",
+    REFRESH: process.env.API_REFRESH_ENDPOINT || "/api/auth/refresh",
     ME: process.env.API_ME_ENDPOINT || "/api/auth/me",
+    LOGOUT: process.env.API_LOGOUT_ENDPOINT || "/api/auth/logout",
   },
   SERVER_API_ENDPOINTS: {
     LOGIN: "/api/auth/login",
     REGISTER: "/api/auth/register",
+    REFRESH: "/api/auth/refresh",
     ME: "/api/auth/me",
+    LOGOUT: "/api/auth/logout",
   },
 };
 

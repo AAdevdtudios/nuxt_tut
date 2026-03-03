@@ -6,18 +6,22 @@
 /**
  * Library Item - Represents a single library resource
  */
+export type LibraryType = "url" | "doc" | "note";
+
 export interface LibraryItem {
-  id: number;
+  id: string;
   documentId: string;
   title: string;
   url?: string | null;
   content?: string | null;
   docID?: string | number | null;
-  libraryType: "url" | "doc" | "note";
+  libraryType: LibraryType;
   createdAt: string;
   updatedAt: string;
-  publishedAt: string;
-  libUUID: string;
+  publishedAt?: string | null;
+  libUUID?: string;
+  fileName?: string | null;
+  fileUrl?: string | null;
 }
 
 /**
@@ -45,13 +49,13 @@ export interface LibrariesResponse {
  */
 export interface LibraryCreateRequest {
   title: string;
-  libraryType: "url" | "doc" | "note";
+  libraryType: LibraryType;
   url?: string;
   content?: string;
   docID?: string | number;
-  users_permissions_user?: string | number;
   libUUID?: string;
   locale?: string;
+  file?: File | null;
 }
 
 /**
@@ -59,12 +63,12 @@ export interface LibraryCreateRequest {
  */
 export interface LibraryUpdateRequest {
   title?: string;
-  libraryType?: "url" | "doc" | "note";
+  libraryType?: LibraryType;
   url?: string;
   content?: string;
   docID?: string | number;
-  users_permissions_user?: string | number;
   libUUID?: string;
+  file?: File | null;
 }
 
 /**
@@ -79,7 +83,7 @@ export interface LibrarySingleResponse {
  * Upload File Response - Response from file upload endpoint
  */
 export interface UploadedFile {
-  id: number;
+  id: string;
   documentId: string;
   name: string;
   alternativeText: string | null;
@@ -113,6 +117,21 @@ export const LIBRARY_TYPE_LABELS: Record<string, string> = {
   doc: "Document",
   note: "Note",
 };
+
+export const libraryTypeOptions = [
+  { label: "All", value: "all" },
+  { label: "Documents", value: "doc" },
+  { label: "Links", value: "url" },
+  { label: "Notes", value: "note" },
+] as const;
+
+export type LibraryTypeValue = (typeof libraryTypeOptions)[number]["value"];
+
+export interface LibrarySelection {
+  id: number;
+  title: string;
+  type: LibraryTypeValue;
+}
 
 /**
  * Library Type Icons - Icon names for library types

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import * as z from "zod";
 import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
-import type { AuthResponse, User } from "~/types";
 import { useAuthStore } from "~/stores/auth";
 
 // setup layout
@@ -72,6 +71,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   pending.value = true;
   try {
     await auth.login(payload.data);
+    await auth.fetchCurrentUser();
     toast.add({
       title: "Success",
       description: "Logged in successfully",

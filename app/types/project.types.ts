@@ -20,7 +20,7 @@ export type ProjectIcon =
  * Library item in project context
  */
 export interface ProjectLibrary {
-  id: number;
+  id: string;
   documentId: string;
   title: string;
   url?: string | null;
@@ -37,7 +37,7 @@ export interface ProjectLibrary {
  * Project Item - Represents a single project resource
  */
 export interface ProjectItem {
-  id: number;
+  id: string;
   documentId: string;
   title: string;
   description?: string | null;
@@ -83,7 +83,7 @@ export interface ProjectCreateRequest {
   color: string;
   start: string;
   end: string;
-  libraries?: (string | number)[];
+  libraries?: string[];
 }
 
 /**
@@ -96,7 +96,7 @@ export interface ProjectUpdateRequest {
   color?: string;
   start?: string;
   end?: string;
-  libraries?: (string | number)[];
+  libraries?: string[];
 }
 
 /**

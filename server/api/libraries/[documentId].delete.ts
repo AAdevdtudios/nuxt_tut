@@ -1,21 +1,20 @@
 import { createError, getRouterParam } from "h3";
 import { useApi } from "../../utils/api";
-import type { LibrarySingleResponse } from "~/types/library.types";
 
 export default defineEventHandler(async (event) => {
   try {
-    const documentId = getRouterParam(event, "documentId");
+    const libraryId = getRouterParam(event, "documentId");
 
-    if (!documentId || typeof documentId !== "string") {
+    if (!libraryId || typeof libraryId !== "string") {
       throw createError({
         statusCode: 400,
-        statusMessage: "Valid documentId is required",
+        statusMessage: "Valid libraryId is required",
       });
     }
 
-    const response = await useApi<LibrarySingleResponse>(
+    const response = await useApi<{ success?: boolean }>(
       event,
-      `/libraries/${documentId}`,
+      `/library/items/${libraryId}`,
       {
         method: "DELETE",
         useJwt: true,
@@ -24,8 +23,6 @@ export default defineEventHandler(async (event) => {
 
     return response;
   } catch (error: any) {
-    console.error("[libraries-delete] Error:", error);
-
     throw createError({
       statusCode: error.status || 500,
       statusMessage: error.message || "Failed to delete library",

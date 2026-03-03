@@ -38,7 +38,7 @@ export function useLibraryValidation() {
         field: "libraryType",
         message: "Library type is required",
       });
-    } else if (!["url", "doc", "note"].includes(payload.libraryType)) {
+    } else if (!["url", "docs", "note"].includes(payload.libraryType)) {
       errors.value.push({
         field: "libraryType",
         message: 'Library type must be "url", "doc", or "note"',
@@ -47,6 +47,14 @@ export function useLibraryValidation() {
 
     // URL validation (if type is URL and url is provided)
     if (
+      payload.libraryType === "url" &&
+      (!payload.url || payload.url.trim() === "")
+    ) {
+      errors.value.push({
+        field: "url",
+        message: "URL is required for website type",
+      });
+    } else if (
       payload.libraryType === "url" &&
       payload.url &&
       payload.url.trim() !== ""
@@ -66,6 +74,20 @@ export function useLibraryValidation() {
       errors.value.push({
         field: "content",
         message: "Content is too long (max 10,000 characters)",
+      });
+    }
+
+    if (payload.libraryType === "note" && !payload.content?.trim()) {
+      errors.value.push({
+        field: "content",
+        message: "Content is required for note type",
+      });
+    }
+
+    if (payload.libraryType === "doc" && !payload.file) {
+      errors.value.push({
+        field: "file",
+        message: "File is required for document type",
       });
     }
 

@@ -33,8 +33,9 @@ export class ExploreService {
    * @returns Sorted array of unique language strings
    */
   extractUniqueLanguages(explores: Explore[]): string[] {
-    const languages = new Set(explores.map((explore) => explore.Language));
-    return Array.from(languages).sort();
+    return Array.from(new Set(explores.map((explore) => explore.copyright)))
+      .filter(Boolean)
+      .sort();
   }
 
   /**

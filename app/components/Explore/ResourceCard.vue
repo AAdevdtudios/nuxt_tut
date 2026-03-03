@@ -9,24 +9,20 @@
       />
       <div class="flex flex-col">
         <span class="text-sm md:text-xl font-semibold text-card-foreground">
-          {{ explore.Title }}
+          {{ explore.title }}
         </span>
         <p class="mt-1 text-xs text-muted line-clamp-2 md:line-clamp-3">
-          {{ explore.Description }}
+          {{ explore.description }}
         </p>
         <div
           class="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:gap-3"
         >
-          <span class="rounded-full bg-muted px-2 py-0.5">{{
-            explore.Language
-          }}</span>
-          <span class="hidden md:inline">•</span>
           <span class="flex items-center gap-1">
             <UIcon name="i-lucide-download" class="h-3 w-3" />
-            {{ formatDownloadCount(explore.Downloads) }} downloads
+            {{ formatDownloadCount(explore.downloads) }} downloads
           </span>
           <span class="hidden md:inline">•</span>
-          <span class="text-xs">{{ explore.Copyright }}</span>
+          <span class="text-xs">{{ explore.copyright }}</span>
         </div>
       </div>
     </div>

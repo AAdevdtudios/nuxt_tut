@@ -7,12 +7,16 @@ export const envSchema = z.object({
   SERVER_API_ENDPOINTS: z.object({
     LOGIN: z.string().min(1),
     REGISTER: z.string().min(1),
+    REFRESH: z.string().min(1),
     ME: z.string().min(1),
+    LOGOUT: z.string().min(1),
   }),
   API_ENDPOINTS: z.object({
     LOGIN: z.string().min(1),
     REGISTER: z.string().min(1),
+    REFRESH: z.string().min(1),
     ME: z.string().min(1),
+    LOGOUT: z.string().min(1),
   }),
 });
 

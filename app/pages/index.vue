@@ -11,18 +11,15 @@ const auth = useAuthStore();
       <h2 class="text-2xl mt-6 mb-2">User Info</h2>
       <ul class="mb-4">
         <li><strong>ID:</strong> {{ auth.currentUser.id }}</li>
-        <li><strong>Username:</strong> {{ auth.currentUser.username }}</li>
+        <li><strong>Name:</strong> {{ auth.currentUser.displayName }}</li>
         <li><strong>Email:</strong> {{ auth.currentUser.email }}</li>
+        <li><strong>Role:</strong> {{ auth.currentUser.role }}</li>
         <li>
-          <strong>Confirmed:</strong>
-          {{ auth.currentUser.confirmed ? "Yes" : "No" }}
+          <strong>Locked:</strong>
+          {{ auth.currentUser.isLocked ? "Yes" : "No" }}
         </li>
-        <li>
-          <strong>Blocked:</strong>
-          {{ auth.currentUser.blocked ? "Yes" : "No" }}
-        </li>
-        <li v-if="auth.currentUser.role">
-          <strong>Role:</strong> {{ auth.currentUser.role.name }}
+        <li v-if="auth.currentUser.subscription">
+          <strong>Plan:</strong> {{ auth.currentUser.subscription.planName }}
         </li>
       </ul>
     </div>

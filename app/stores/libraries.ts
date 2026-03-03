@@ -15,11 +15,41 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type {
   LibraryItem,
+  LibrariesResponse,
+  LibrarySingleResponse,
   LibraryCreateRequest,
   LibraryUpdateRequest,
 } from "~/types";
 
 export const useLibraryStore = defineStore("libraries", () => {
+  const { $api } = useNuxtApp();
+
+  const toFormData = (
+    payload: LibraryCreateRequest | LibraryUpdateRequest,
+  ): FormData => {
+    const formData = new FormData();
+
+    if (payload.title !== undefined) formData.append("title", payload.title);
+    if (payload.libraryType !== undefined) {
+      formData.append("type", payload.libraryType);
+      formData.append("libraryType", payload.libraryType);
+    }
+    if (payload.url !== undefined && payload.url !== null) {
+      formData.append("url", payload.url);
+    }
+    if (payload.content !== undefined && payload.content !== null) {
+      formData.append("content", payload.content);
+    }
+    if (payload.docID !== undefined && payload.docID !== null) {
+      formData.append("docID", String(payload.docID));
+    }
+    if ("file" in payload && payload.file) {
+      formData.append("file", payload.file);
+    }
+
+    return formData;
+  };
+
   // State: Normalized libraries by ID
   const librariesById = ref<Record<string | number, LibraryItem>>({});
 
@@ -87,14 +117,23 @@ export const useLibraryStore = defineStore("libraries", () => {
         query.append("search", search);
       }
 
-      const response = await $fetch<any>(`/api/libraries?${query.toString()}`);
+      if (type && type !== "all") {
+        query.append("type", type);
+      }
+
+      const response = await $api.fetch<LibrariesResponse>(
+        `/api/libraries?${query.toString()}`,
+        {
+          method: "GET",
+        },
+      );
 
       if (!response?.data || !Array.isArray(response.data)) {
         throw new Error("Invalid response structure");
       }
 
       // Normalize: Store libraries by ID (upsert pattern)
-      response.data.forEach((lib: any) => {
+      response.data.forEach((lib) => {
         librariesById.value[lib.id] = lib;
       });
 
@@ -122,7 +161,12 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<any>(`/api/libraries/${id}`);
+      const response = await $api.fetch<LibrarySingleResponse>(
+        `/api/libraries/${id}`,
+        {
+          method: "GET",
+        },
+      );
 
       if (!response?.data) throw new Error("Invalid response structure");
 
@@ -146,9 +190,9 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<any>("/api/libraries", {
+      const response = await $api.mutate<LibrarySingleResponse>("/api/libraries", {
         method: "POST",
-        body: payload,
+        body: toFormData(payload),
       });
 
       if (!response?.data) throw new Error("Invalid response structure");
@@ -176,10 +220,13 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await $fetch<any>(`/api/libraries/${id}`, {
-        method: "PUT",
-        body: payload,
-      });
+      const response = await $api.mutate<LibrarySingleResponse>(
+        `/api/libraries/${id}`,
+        {
+          method: "PUT",
+          body: toFormData(payload),
+        },
+      );
 
       if (!response?.data) throw new Error("Invalid response structure");
 
@@ -203,7 +250,7 @@ export const useLibraryStore = defineStore("libraries", () => {
       isLoading.value = true;
       error.value = null;
 
-      await $fetch(`/api/libraries/${id}`, {
+      await $api.mutate(`/api/libraries/${id}`, {
         method: "DELETE",
       });
 

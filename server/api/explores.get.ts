@@ -1,52 +1,39 @@
-import { getQuery, createError } from "h3";
+import { createError, getQuery } from "h3";
 import { useApi } from "../utils/api";
+import { normalizeExploresResponse } from "../utils/explore";
+import type { ExploresResponse } from "~/types/explore.types";
 
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event);
-    const page = query.page ? parseInt(query.page as string) : 1;
-    const pageSize = query.pageSize ? parseInt(query.pageSize as string) : 10;
-    const search = query.search as string | undefined;
-    const category = query.category as string | undefined;
-
-    // Build Strapi params
-    const params: Record<string, any> = {
-      "pagination[page]": page,
-      "pagination[pageSize]": pageSize,
-    };
-    if (search && search.trim() !== "") {
-      params["filters[$or][0][Title][$containsi]"] = search;
-      params["filters[$or][1][Description][$containsi]"] = search;
-      params["filters[$or][2][Author][$containsi]"] = search;
-    }
-    if (category && category !== "all") {
-      params["filters[category][slug][$eq]"] = category;
-    }
-
-    // Build query string
-    // http://localhost:1337/api/explores?pagination%5Bpage%5D=1&pagination%5BpageSize%5D=5&filters%5Bcategory%5D[slug]=history
-    const queryString = new URLSearchParams(params).toString();
-    const path = `/explores?${queryString}`;
-
-    // Use the shared API utility (handles JWT from cookies)
-    const data = await useApi<any>(event, path, {
-      method: "GET",
-      useJwt: true,
+    const params = new URLSearchParams({
+      Page: String(query.page || query.Page || 1),
+      PageSize: String(query.pageSize || query.PageSize || 10),
     });
 
-    // Custom response structure
-    return {
-      success: true,
-      data: {
-        items: data.data || [],
-        pagination: data.meta?.pagination || {},
+    if (typeof query.search === "string" && query.search.trim()) {
+      params.set("Search", query.search);
+    }
+
+    const categoryId = query.categoryId || query.CategoryId;
+    if (typeof categoryId === "string" && categoryId !== "all") {
+      params.set("CategoryId", categoryId);
+    }
+
+    const data = await useApi<unknown>(
+      event,
+      `/catalog/explores?${params.toString()}`,
+      {
+        method: "GET",
+        useJwt: false,
       },
-    };
+    );
+
+    return normalizeExploresResponse(data) as ExploresResponse;
   } catch (error: any) {
-    console.error("Error fetching explores:", error);
-    return {
-      success: false,
-      error: error.message || "Failed to fetch explores",
-    };
+    throw createError({
+      statusCode: error.status || 500,
+      statusMessage: error.message || "Failed to fetch explores",
+    });
   }
 });

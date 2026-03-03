@@ -1,32 +1,40 @@
-// Register endpoint implementation
-import { defineEventHandler, readBody } from "h3";
-import { AuthResponse } from "~~/server/types";
+import { defineEventHandler, readBody, setCookie } from "h3";
+import type { AuthSessionResponse } from "~~/server/types";
 import { useApi } from "~~/server/utils/api";
+
+function setAuthCookies(event: any, session: AuthSessionResponse) {
+  const secure = process.env.NODE_ENV === "production";
+
+  setCookie(event, "access_token", session.accessToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    expires: new Date(session.accessTokenExpiresAtUtc),
+    path: "/",
+  });
+
+  setCookie(event, "refresh_token", session.refreshToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    expires: new Date(session.refreshTokenExpiresAtUtc),
+    path: "/",
+  });
+}
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
 
-  try {
-    const response = await useApi<AuthResponse>(event, "/auth/local/register", {
-      method: "POST",
-      body: {
-        email: body["email"],
-        username: body["username"],
-        password: body["password"],
-      },
-      useJwt: false,
-    });
-    setCookie(event, "access_token", response.jwt, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
+  const response = await useApi<AuthSessionResponse>(event, "/auth/register", {
+    method: "POST",
+    body: {
+      email: body?.email,
+      password: body?.password,
+      displayName: body?.displayName,
+    },
+    useJwt: false,
+  });
 
-    return response;
-  } catch (error) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "Login failed",
-    });
-  }
+  setAuthCookies(event, response);
+  return response;
 });

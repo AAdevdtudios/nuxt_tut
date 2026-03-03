@@ -26,11 +26,11 @@ export {
   DEFAULT_CATEGORY,
 } from "./explore.types";
 
-// Library types - from types.d.ts
+// Library types
 export type {
   LibraryItem,
   LibraryTypeValue,
   LibrarySelection,
-  LibraryListResponse,
+  LibrariesResponse as LibraryListResponse,
   LibraryType,
-} from "#app";
+} from "./library.types";

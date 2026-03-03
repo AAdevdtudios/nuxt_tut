@@ -21,7 +21,7 @@ export interface LibraryFormData {
 }
 
 export function useLibraryForm() {
-  const { createLibrary, uploadFile, error, isLoading } = useLibrary();
+  const { createLibrary, error, isLoading } = useLibrary();
 
   const formData = ref<LibraryFormData>({
     title: "",
@@ -52,8 +52,7 @@ export function useLibraryForm() {
           throw new Error("File is required for document type");
         }
 
-        const fileId = await uploadFile(formData.value.file);
-        payload.docID = fileId;
+        payload.file = formData.value.file;
       }
       // Handle URL for website type
       else if (formData.value.libraryType === "url") {

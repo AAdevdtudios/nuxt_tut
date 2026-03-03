@@ -50,10 +50,12 @@ definePageMeta({
   layout: "dashboard",
 });
 
+const toast = useToast();
+
 // Initialize explore composable with error handling
 const explore = useExplore({
   onError: (error: string) => {
-    useToast().add({
+    toast.add({
       title: "Error",
       description: error,
       color: "error",
@@ -76,7 +78,7 @@ onMounted(async () => {
     await explore.initialize();
   } catch (error) {
     console.error("[Explore Page] Failed to initialize:", error);
-    useToast().add({
+    toast.add({
       title: "Initialization Error",
       description: "Failed to load explore data",
       color: "error",

@@ -141,7 +141,7 @@ const libraryService = new LibraryService();
 
 function getIconForType(type: LibraryItem["libraryType"]): string {
   switch (type) {
-    case "doc":
+    case "docs":
       return "i-lucide-file-text";
     case "url":
       return "i-lucide-link";
@@ -154,7 +154,7 @@ function getIconForType(type: LibraryItem["libraryType"]): string {
 
 function getLabelForType(type: LibraryItem["libraryType"]): string {
   switch (type) {
-    case "doc":
+    case "docs":
       return "Document";
     case "url":
       return "Link";

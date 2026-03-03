@@ -1,36 +1,21 @@
-/**
- * Data Transfer Objects (DTOs) and Type Definitions for Explore Feature
- * Follows strict typing for API contracts and internal state management
- */
-
-// ============================================================================
-// DOMAIN MODELS - Core Entity Types
-// ============================================================================
-
 export interface Category {
-  id: number;
-  documentId: string;
+  id: string;
   name: string;
-  slug: string;
   description: string | null;
+  createdAtUtc?: string;
 }
 
 export interface Explore {
-  id: number;
-  documentId: string;
-  Title: string;
-  Description: string;
-  Downloads: string;
-  Copyright: string;
+  id: string;
+  title: string;
+  description: string;
+  copyright: string;
   url: string;
-  slug: string;
-  Language: string;
-  Author: string;
+  categoryId: string;
+  downloads: number;
+  createdAtUtc?: string;
+  updatedAtUtc?: string;
 }
-
-// ============================================================================
-// PAGINATION - Pagination Meta Information
-// ============================================================================
 
 export interface PaginationMeta {
   page: number;
@@ -39,45 +24,34 @@ export interface PaginationMeta {
   total: number;
 }
 
-// ============================================================================
-// API RESPONSE DTOs - Standardized Response Structures
-// ============================================================================
-
 export interface CategoriesResponse {
-  success: boolean;
-  data: {
-    data: Category[];
-  };
-  error?: string;
+  items: Category[];
+  count: number;
+  totalCount: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface ExploresResponse {
-  success: boolean;
-  data: {
-    items: Explore[];
-    pagination: PaginationMeta;
-  };
-  error?: string;
+  items: Explore[];
+  count: number;
+  totalCount: number;
+  page: number;
+  pageSize: number;
 }
-
-// ============================================================================
-// REQUEST DTOs - Query Parameters for API Calls
-// ============================================================================
 
 export interface ExploresQueryParams {
   page: number;
   pageSize: number;
   search?: string;
-  category?: string;
+  categoryId?: string;
 }
 
 export interface CategoriesQueryParams {
-  // Currently no params needed, but structured for future extensibility
+  page?: number;
+  pageSize?: number;
+  search?: string;
 }
-
-// ============================================================================
-// STATE MODELS - Internal State Management
-// ============================================================================
 
 export interface ExploreState {
   explores: Explore[];
@@ -99,18 +73,10 @@ export interface FilterState {
   selectedCategory: string;
 }
 
-// ============================================================================
-// COMPOSITE STATE - Combined State for Feature
-// ============================================================================
-
 export interface ExploreFeatureState extends ExploreState {
   pagination: PaginationState;
   filters: FilterState;
 }
-
-// ============================================================================
-// LANGUAGE UTILITIES
-// ============================================================================
 
 export type Language = string;
 
@@ -118,10 +84,6 @@ export interface LanguageOption {
   value: string;
   label: string;
 }
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
 
 export const DEFAULT_PAGE_SIZE = 10;
 export const PAGE_SIZE_OPTIONS = [3, 5, 10, 20, 50];
