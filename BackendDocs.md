@@ -4,8 +4,13 @@ This file is the frontend contract for the current backend.
 
 Use:
 - base API URL: `http://localhost:5296`
-- frontend origin in local dev: `http://localhost:3000`
+- student frontend origin in local dev: `http://localhost:3000`
+- admin frontend origin in local dev: `http://localhost:3001`
 - auth header for protected routes: `Authorization: Bearer <accessToken>`
+
+Response headers:
+- `X-Request-Id`: returned on every response. If the client sends `X-Request-Id`, the server echoes it.
+- `X-Trace-Id`: server-side trace id for log correlation.
 
 Important:
 - most routes use `application/json`
@@ -15,18 +20,28 @@ Important:
 
 ## Common Error Shapes
 
+All endpoints now return a consistent envelope:
+
+```json
+{
+  "error": "Human-readable message",
+  "code": "Validation|Unauthorized|Forbidden|NotFound|Conflict|MethodNotAllowed|UnsupportedMediaType|RateLimited|ServerError",
+  "errors": {
+    "fieldName": ["validation message"]
+  }
+}
+```
+
+Notes:
+- `errors` is only included for validation issues.
+- There is no `statusCode` field in error bodies. Use HTTP status.
+
 ### Unauthorized
 Status: `401`
 ```json
 {
-  "error": "Unauthorized"
-}
-```
-
-or:
-```json
-{
-  "error": "Missing or invalid access token."
+  "error": "Missing or invalid access token.",
+  "code": "Unauthorized"
 }
 ```
 
@@ -43,21 +58,11 @@ Status: `403`
 Status: `400`
 ```json
 {
-  "error": "Provide at least one field to update.",
-  "code": "Validation"
-}
-```
-
-### FastEndpoints validation error
-Status: `400`
-```json
-{
-  "statusCode": 400,
-  "message": "One or more errors occurred!",
+  "error": "Validation failed.",
+  "code": "Validation",
   "errors": {
-    "fieldName": [
-      "validation message"
-    ]
+    "email": ["Email is invalid."],
+    "displayName": ["'DisplayName' must not be empty."]
   }
 }
 ```
@@ -68,6 +73,53 @@ Status: `404`
 {
   "error": "Project not found",
   "code": "NotFound"
+}
+```
+
+### Method not allowed
+Status: `405`
+```json
+{
+  "error": "Method not allowed",
+  "code": "MethodNotAllowed"
+}
+```
+
+### Rate limited
+Status: `429`
+```json
+{
+  "error": "Too many requests",
+  "code": "RateLimited"
+}
+```
+
+Rate limiting applies to:
+- `/api/ai/*`
+- `/projects/{projectId}/adaptive/*`
+
+Current defaults (per user per minute):
+- Free: `20`
+- Basic: `60`
+- Pro: `120`
+
+Override with env vars:
+- `RATE_LIMIT_AI_FREE_PER_MINUTE`
+- `RATE_LIMIT_AI_BASIC_PER_MINUTE`
+- `RATE_LIMIT_AI_PRO_PER_MINUTE`
+- `RATE_LIMIT_AI_WINDOW_SECONDS` (default `60`)
+
+Adaptive cooldowns:
+- `ADAPTIVE_EVALUATION_COOLDOWN_SECONDS` (default `45`)
+- `ADAPTIVE_QUESTION_COOLDOWN_SECONDS` (default `15`)
+
+### Unsupported media type
+Status: `415`
+```json
+{
+  "statusCode": 415,
+  "error": "Unsupported media type",
+  "code": "UnsupportedMediaType"
 }
 ```
 
@@ -104,6 +156,17 @@ Request:
 ```json
 {
   "email": "user@example.com",
+  "name": "Dev Therapist",
+  "displayName": "dev_therapist",
+  "password": "StrongPassword123"
+}
+```
+
+Backward-compatible request:
+```json
+{
+  "email": "user@example.com",
+  "name": "Dev Therapist",
   "displayName": "Dev Therapist",
   "password": "StrongPassword123"
 }
@@ -114,7 +177,8 @@ Success `201`:
 {
   "userId": "GUID",
   "email": "user@example.com",
-  "displayName": "Dev Therapist",
+  "name": "Dev Therapist",
+  "displayName": "dev_therapist",
   "role": "user",
   "accessToken": "jwt",
   "accessTokenExpiresAtUtc": "2026-03-01T12:00:00+00:00",
@@ -126,6 +190,9 @@ Success `201`:
 Notes:
 - password must be at least 8 chars
 - password must contain uppercase, lowercase, number
+- `name` is the real name
+- `displayName` is the username
+- username allowed characters: letters, numbers, `.`, `_`, `-`
 
 ### Login
 - method: `POST`
@@ -146,6 +213,7 @@ Success `200`: same shape as register
 Common errors:
 - `401` invalid credentials
 - `423` user locked
+- `403` account deleted, recover it first
 
 ### Refresh token
 - method: `POST`
@@ -192,10 +260,13 @@ Success `200`:
 {
   "id": "GUID",
   "email": "user@example.com",
-  "displayName": "Dev Therapist",
+  "name": "Dev Therapist",
+  "displayName": "dev_therapist",
   "role": "user",
   "createdAtUtc": "2026-02-28T20:00:00+00:00",
   "isLocked": false,
+  "isDeleted": false,
+  "deletedAtUtc": null,
   "subscription": {
     "planCode": "free",
     "planName": "Free",
@@ -222,6 +293,110 @@ Success `200`:
   }
 }
 ```
+
+### Update profile name
+- method: `PATCH`
+- url: `/auth/profile/name`
+- auth: required
+- content type: `application/json`
+
+Request:
+```json
+{
+  "name": "New Name"
+}
+```
+
+Success `200`:
+```json
+{
+  "message": "Name updated.",
+  "user": {
+    "id": "GUID",
+    "email": "user@example.com",
+    "name": "New Name",
+    "displayName": "dev_therapist",
+    "role": "user",
+    "createdAtUtc": "2026-02-28T20:00:00+00:00"
+  }
+}
+```
+
+Notes:
+- this only updates the real name
+- email and role are not editable by the user
+
+### Update username
+- method: `PATCH`
+- url: `/auth/profile/username`
+- auth: required
+- content type: `application/json`
+
+Request:
+```json
+{
+  "displayName": "new_username"
+}
+```
+
+Success `200`:
+```json
+{
+  "message": "Username updated.",
+  "user": {
+    "id": "GUID",
+    "email": "user@example.com",
+    "name": "Dev Therapist",
+    "displayName": "new_username",
+    "role": "user",
+    "createdAtUtc": "2026-02-28T20:00:00+00:00"
+  }
+}
+```
+
+Notes:
+- username is separate from real name
+- username allowed characters: letters, numbers, `.`, `_`, `-`
+- duplicate usernames return `409`
+
+### Delete account
+- method: `DELETE`
+- url: `/auth/account`
+- auth: required
+- request body: none
+
+Success `200`:
+```json
+{
+  "message": "Account deleted. Use account recovery to restore access.",
+  "deletedAtUtc": "2026-03-04T00:40:00+00:00"
+}
+```
+
+Notes:
+- this is a soft delete
+- refresh tokens are revoked immediately
+- login and refresh are blocked until recovery
+
+### Recover deleted account
+- method: `POST`
+- url: `/auth/account/recover`
+- auth: none
+- content type: `application/json`
+
+Request:
+```json
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123"
+}
+```
+
+Success `200`: same shape as login/register
+
+Common errors:
+- `401` invalid credentials
+- `409` account already active
 
 ## Subscriptions
 
@@ -253,6 +428,70 @@ Success `200`:
 - auth: required
 
 Success `200`: same shape as `subscription` in `/auth/me`
+
+### Quota Troubleshooting (Documents / Questions / Chat)
+
+If a route returns `403`, first check:
+- `GET /subscription/me`
+
+Important fields:
+- `planCode`
+- `isUnlimitedForTesting`
+- `usage.documentsUsed` vs `usage.documentLimit`
+- `usage.processedPagesUsed` vs `usage.processedPagesLimit`
+- `usage.questionsUsed` vs `usage.questionLimit`
+- `usage.essayGradingsUsed` vs `usage.essayGradingsLimit`
+- `allowedChatTiers`
+
+Typical `403` responses:
+
+Document limit:
+```json
+{
+  "error": "Document limit exceeded for plan 'Basic'.",
+  "code": "Forbidden"
+}
+```
+
+Processed pages limit:
+```json
+{
+  "error": "Processed page limit exceeded for plan 'Basic'.",
+  "code": "Forbidden"
+}
+```
+
+Chat tier not allowed:
+```json
+{
+  "error": "Plan 'Free' does not include chat tier 'openai-standard'."
+}
+```
+
+Debug order for `403` on docs:
+1. confirm current plan from `/subscription/me`
+2. confirm `documentsUsed < documentLimit`
+3. confirm `processedPagesUsed + newFilePages <= processedPagesLimit`
+4. confirm `isUnlimitedForTesting` is expected
+
+Admin testing override:
+- method: `PATCH`
+- url: `/admin/subscription/users/{userId}`
+- auth: admin
+
+Request:
+```json
+{
+  "userId": "GUID",
+  "planCode": "basic",
+  "discountPercent": 0,
+  "unlimitedTesting": true
+}
+```
+
+Notes:
+- `unlimitedTesting=true` bypasses quota checks for that user
+- set `unlimitedTesting=false` to test real plan limits
 
 ### Admin assign plan
 - method: `PATCH`
@@ -476,8 +715,22 @@ Important:
 - send only fields to change
 - if `libraryIds` is sent and `replaceLibraries = false`, backend merges new ids with existing attached libraries
 - if `replaceLibraries = true`, backend replaces all attached libraries with the passed ids
+- AI content ingestion/summary runs when a library is attached to a project (not on every library edit)
+- use `ingestionStatus` to show readiness (`ready` = AI can use it, `unsupported` = format not supported)
+- URL items now attempt HTML extraction; if extraction fails, `ingestionStatus` becomes `failed`.
 
 Success `200`: updated project object
+
+### Remove single library from project
+- method: `DELETE`
+- url: `/projects/{projectId}/libraries/{libraryItemId}`
+- auth: required
+
+Success `200`: updated project object
+
+Common errors:
+- `404` project not found
+- `404` library not attached to that project
 
 ### Delete project
 - method: `DELETE`
@@ -580,7 +833,7 @@ Fields:
 - `totalLibraryItems`: current active library items
 - `totalProjects`: current active projects
 - `questionsAnswered`: total evaluated questions solved
-- `recentActivities`: latest activity feed for the user
+- `recentActivities`: latest activity feed for the user, capped to the most recent 4 items
 
 ### Per-project analytics
 - method: `GET`
@@ -608,6 +861,244 @@ Success `200`:
 }
 ```
 
+Notes:
+- project `recentActivities` is also capped to the most recent 4 items
+
+## Feedback
+
+### Submit feedback
+- method: `POST`
+- url: `/feedback`
+- auth: required
+- content type: `application/json`
+
+Allowed categories:
+- `bug-report`
+- `feature-request`
+- `improvement`
+- `praise`
+
+Request:
+```json
+{
+  "category": "bug-report",
+  "title": "AI answer froze on upload",
+  "description": "The upload completed but the next step failed when I tried to attach the document.",
+  "overallExperienceRating": 3
+}
+```
+
+Success `201`:
+```json
+{
+  "id": "GUID",
+  "category": "bug-report",
+  "title": "AI answer froze on upload",
+  "description": "The upload completed but the next step failed when I tried to attach the document.",
+  "overallExperienceRating": 3,
+  "status": "open",
+  "adminResolution": "",
+  "voteCount": 0,
+  "hasVoted": false,
+  "isOwner": true,
+  "createdAtUtc": "2026-03-03T10:00:00+00:00",
+  "updatedAtUtc": "2026-03-03T10:00:00+00:00"
+}
+```
+
+### List feedback
+- method: `GET`
+- url: `/feedback?category=&status=&page=1&pageSize=20`
+- auth: required
+
+Success `200`:
+```json
+{
+  "count": 1,
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20,
+  "items": [
+    {
+      "id": "GUID",
+      "category": "feature-request",
+      "title": "Add collaboration",
+      "description": "Would be useful to share projects with classmates.",
+      "overallExperienceRating": 4,
+      "status": "in-review",
+      "adminResolution": "Planned for later roadmap review.",
+      "voteCount": 2,
+      "hasVoted": true,
+      "isOwner": false,
+      "createdAtUtc": "2026-03-03T10:00:00+00:00",
+      "updatedAtUtc": "2026-03-03T11:00:00+00:00"
+    }
+  ]
+}
+```
+
+### Toggle feedback vote
+- method: `POST`
+- url: `/feedback/{feedbackId}/vote`
+- auth: required
+
+Behavior:
+- first click adds vote
+- second click removes vote
+
+Success `200`:
+- returns the updated feedback item with new `voteCount` and `hasVoted`
+
+### Admin update feedback status
+- method: `PATCH`
+- url: `/admin/feedback/{feedbackId}`
+- auth: admin only
+- content type: `application/json`
+
+Allowed statuses:
+- `open`
+- `in-review`
+- `resolved`
+
+Request:
+```json
+{
+  "feedbackId": "GUID",
+  "status": "resolved",
+  "adminResolution": "This issue has been fixed in the latest release."
+}
+```
+
+Success `200`:
+- returns the updated feedback item
+
+## Help And Support
+
+### List support articles
+- method: `GET`
+- url: `/support?category=all`
+- auth: none
+
+Allowed categories:
+- `all`
+- `library`
+- `ai-chat`
+- `questions`
+- `projects`
+- `timetable`
+- `account`
+- `general`
+
+Success `200`:
+```json
+{
+  "categories": [
+    "all",
+    "library",
+    "ai-chat",
+    "questions",
+    "projects",
+    "timetable",
+    "account",
+    "general"
+  ],
+  "items": [
+    {
+      "id": "GUID",
+      "category": "library",
+      "question": "How do I upload study materials to my Library?",
+      "answer": "Open Library, choose upload or create, then add a note, link, or document.",
+      "sortOrder": 1,
+      "updatedAtUtc": "2026-03-03T10:00:00+00:00"
+    }
+  ]
+}
+```
+
+### Create support ticket
+- method: `POST`
+- url: `/support/tickets`
+- auth: required
+- content type: `application/json`
+
+Request:
+```json
+{
+  "title": "Upload failed",
+  "description": "My PDF upload fails with 413.",
+  "module": "library",
+  "priority": "medium"
+}
+```
+
+Success `201`:
+```json
+{
+  "id": "GUID",
+  "ownerUserId": "GUID",
+  "title": "Upload failed",
+  "description": "My PDF upload fails with 413.",
+  "module": "library",
+  "priority": "medium",
+  "status": "open",
+  "createdAtUtc": "2026-03-15T10:00:00+00:00",
+  "updatedAtUtc": "2026-03-15T10:00:00+00:00"
+}
+```
+
+### List my support tickets
+- method: `GET`
+- url: `/support/tickets?status=&module=&page=1&pageSize=20`
+- auth: required
+
+Success `200`:
+```json
+{
+  "count": 1,
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20,
+  "items": [
+    {
+      "id": "GUID",
+      "ownerUserId": "GUID",
+      "title": "Upload failed",
+      "description": "My PDF upload fails with 413.",
+      "module": "library",
+      "priority": "medium",
+      "status": "open",
+      "createdAtUtc": "2026-03-15T10:00:00+00:00",
+      "updatedAtUtc": "2026-03-15T10:00:00+00:00"
+    }
+  ]
+}
+```
+
+### Get support ticket by id
+- method: `GET`
+- url: `/support/tickets/{ticketId}`
+- auth: required
+
+Success `200`:
+```json
+{
+  "ticket": {
+    "id": "GUID",
+    "ownerUserId": "GUID",
+    "title": "Upload failed",
+    "description": "My PDF upload fails with 413.",
+    "module": "library",
+    "priority": "medium",
+    "status": "open",
+    "createdAtUtc": "2026-03-15T10:00:00+00:00",
+    "updatedAtUtc": "2026-03-15T10:00:00+00:00"
+  },
+  "notes": [
+    { "id": "GUID", "ticketId": "GUID", "authorUserId": "GUID", "note": "We are investigating.", "isInternal": false, "createdAtUtc": "2026-03-15T11:00:00+00:00" }
+  ]
+}
+```
+
 ## Library Items
 
 This section matters because request type changes based on whether you are uploading a file.
@@ -616,6 +1107,13 @@ Library type values:
 - `Docs`
 - `Url`
 - `Note`
+
+Ingestion status values:
+- `pending` (not processed yet)
+- `processing` (processing started)
+- `ready` (content extracted and usable by AI)
+- `failed` (processing failed)
+- `unsupported` (unsupported format, e.g. EPUB)
 
 For JSON responses the backend returns `libraryItemType`.
 
@@ -648,6 +1146,10 @@ Success `200`:
       "docsUrl": "",
       "url": "",
       "content": "study content",
+      "ingestionStatus": "ready",
+      "ingestionError": "",
+      "processedPageCount": 0,
+      "contentProcessedAtUtc": "2026-03-01T00:00:00+00:00",
       "ownerUserId": "GUID",
       "isDeleted": false,
       "libraryItemType": "Note",
@@ -684,7 +1186,12 @@ Fields:
 Docs rule:
 - for `Docs`, send either `File` or `DocsUrl`
 - do not send both
+- `DocsUrl` must be http/https and end with `.pdf`
+- `File` must be a PDF
 
+Url rule:
+- `Url` must be http/https and point to a normal website or `.pdf` link
+- URLs containing `.epub` are rejected
 Examples:
 
 Create note:
@@ -733,6 +1240,11 @@ Common `400` causes on `/library/create`:
 - `Type=Url` without valid `Url`
 - `Type=Docs` without `File` or `DocsUrl`
 - sent both `File` and `DocsUrl`
+
+Common `403` causes on `/library/create` for `Type=Docs`:
+- document limit exceeded for current plan
+- processed pages monthly limit exceeded
+- user expected `basic/pro` limits but account is still on `free`
 
 ### Update library item
 - method: `PATCH`
@@ -842,9 +1354,14 @@ Current implementation:
 Success `200`:
 ```json
 {
-  "message": "Library item permanently deleted."
+  "message": "Library item permanently deleted.",
+  "deletedLibraryItemId": "GUID",
+  "affectedProjectId": "GUID or null"
 }
 ```
+
+Notes:
+- if `affectedProjectId` is present, refresh project details/list in UI
 
 ## Adaptive AI Flow
 
@@ -890,6 +1407,9 @@ Success `202`:
   "modelVersion": "adaptive-progress-v2"
 }
 ```
+
+Possible errors:
+- `429` if question generation cooldown is active.
 
 ### Step 2: poll job status
 - method: `GET`
@@ -978,6 +1498,7 @@ Request:
 {
   "projectId": "GUID",
   "libraryItemId": null,
+  "jobId": "GUID",
   "attempts": [
     {
       "question": {
@@ -1010,6 +1531,11 @@ Request:
   ]
 }
 ```
+
+Notes:
+- `jobId` should be the job id returned from `/adaptive/questions` submission.
+- Each job id can be evaluated only once.
+- Cooldown between evaluations is enforced (currently 45s, 429 if too frequent).
 
 Success `200`:
 ```json
@@ -1055,6 +1581,10 @@ Use:
 - `results[]` to show per-question feedback
 - `progress.progressLevel` to update the project progress bar
 - `averageScore` for summary card
+
+Possible errors:
+- `409` if the same `jobId` is submitted more than once.
+- `429` if cooldown is active.
 
 ### Current progress snapshot
 - method: `GET`
@@ -1112,9 +1642,18 @@ Request:
   "projectId": "GUID",
   "libraryItemId": "GUID",
   "sessionId": null,
-  "message": "Explain chapter two in simpler terms"
+  "message": "Explain chapter two in simpler terms",
+  "aiTier": "local-basic",
+  "includeWeb": true
 }
 ```
+
+Notes:
+- `aiTier` optional
+- if omitted, backend uses default configured tier
+- allowed values depend on subscription and backend key/model configuration
+- examples: `local-basic`, `openai-standard`, `openai-premium`, `google-standard`, `google-premium`
+- `includeWeb` optional (default `true`): when true, backend adds web snippets and returns source links in response
 
 Success `200`:
 ```json
@@ -1129,11 +1668,145 @@ Success `200`:
         "chunkId": "GUID",
         "snippet": "Relevant excerpt"
       }
+    ],
+    "aiTier": "local-basic",
+    "sources": [
+      {
+        "sourceId": "GUID",
+        "url": "https://example.com/article",
+        "title": "Example Article",
+        "snippet": "Useful web snippet used by the assistant"
+      }
+    ],
+    "toolsUsed": [
+      {
+        "name": "datetime",
+        "status": "ok",
+        "detail": "utc=2026-03-06T10:00:00.0000000+00:00"
+      },
+      {
+        "name": "web-search",
+        "status": "ok",
+        "detail": "results=5"
+      }
     ]
   },
+  "aiTier": "local-basic",
   "progressScore": 38.54,
   "progressLevel": 39,
   "modelVersion": "adaptive-progress-v2"
+}
+```
+
+### Adaptive chat: list accessible AIs for current user
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/chat/ais`
+- auth: required
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "items": [
+    {
+      "tier": "local-basic",
+      "provider": "ollama",
+      "model": "qwen2.5:7b-instruct",
+      "isDefault": true
+    },
+    {
+      "tier": "openai-standard",
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "isDefault": false
+    }
+  ]
+}
+```
+
+### Adaptive chat: list chat sessions in a project
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/chat/sessions`
+- auth: required
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "count": 2,
+  "items": [
+    {
+      "sessionId": "GUID",
+      "libraryItemId": "GUID",
+      "libraryTitle": "Cell Biology Notes",
+      "title": "Explain chapter two in simpler terms",
+      "updatedAtUtc": "2026-03-05T12:00:00+00:00",
+      "createdAtUtc": "2026-03-05T11:58:00+00:00"
+    }
+  ]
+}
+```
+
+### Adaptive chat: list messages in a session
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/chat/sessions/{sessionId}/messages`
+- auth: required
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "sessionId": "GUID",
+  "count": 2,
+  "items": [
+    {
+      "messageId": "GUID",
+      "role": "user",
+      "content": "Hello",
+      "createdAtUtc": "2026-03-06T10:00:00+00:00"
+    },
+    {
+      "messageId": "GUID",
+      "role": "assistant",
+      "content": "Hi, how can I help?",
+      "createdAtUtc": "2026-03-06T10:00:03+00:00"
+    }
+  ]
+}
+```
+
+### Adaptive chat: delete session permanently
+- method: `DELETE`
+- url: `/projects/{projectId}/adaptive/chat/sessions/{sessionId}`
+- auth: required
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "sessionId": "GUID",
+  "deleted": true
+}
+```
+
+### Adaptive chat: list project libraries usable in chat
+- method: `GET`
+- url: `/projects/{projectId}/adaptive/chat/libraries`
+- auth: required
+
+Success `200`:
+```json
+{
+  "projectId": "GUID",
+  "count": 3,
+  "items": [
+    {
+      "libraryItemId": "GUID",
+      "title": "Cell Biology Notes",
+      "type": "Note",
+      "updatedAtUtc": "2026-03-05T10:45:00+00:00"
+    }
+  ]
 }
 ```
 
@@ -1295,3 +1968,39 @@ Important:
   2. poll status
   3. fetch result
   4. submit all answers once for grading
+
+## Admin Dashboard Contract
+
+For complete admin contracts, enums, mutation behavior, and implementation-status notes, use:
+- `Core/Docs/backend.md`
+
+Quick integration notes:
+- all `/admin/*` routes require admin JWT
+- list endpoints use:
+
+```json
+{
+  "count": 0,
+  "totalCount": 0,
+  "page": 1,
+  "pageSize": 20,
+  "items": []
+}
+```
+
+- common admin table endpoints:
+  - `GET /admin/users`
+  - `GET /admin/projects`
+  - `GET /admin/library/items`
+  - `GET /admin/subscription/users`
+  - `GET /admin/support/tickets`
+  - `GET /admin/system/errors`
+  - `GET /admin/system/errors/stream` (SSE)
+  - `GET /admin/audit`
+
+- after successful admin mutations (`PATCH/POST/DELETE`), frontend should refetch relevant list/detail pages.
+
+Realtime system error stream (admin-only)
+- Use Server-Sent Events (SSE)
+- Event name: `systemError`
+- Payload matches `/admin/system/errors` item fields plus `statusCode`, `requestId`, `createdAtUtc`

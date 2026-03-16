@@ -39,6 +39,7 @@ export interface SubscriptionInfo {
 export interface User {
   id: string;
   email: string;
+  name?: string;
   displayName: string;
   role: string;
   createdAtUtc?: string;
@@ -130,9 +131,9 @@ export type UploadResponse = UploadedFile[];
 
 // Legacy library types (deprecated, use LibraryType instead)
 export interface LibrarySelection {
-  id: number;
+  id: string | number;
   title: string;
-  type: LibraryTypeValue;
+  type: string;
 }
 
 export interface LibraryTypeOption {
@@ -150,7 +151,7 @@ export const libraryTypeOptions = [
 export type LibraryTypeValue = (typeof libraryTypeOptions)[number]["value"];
 
 export type ChatHistory = {
-  id: number;
+  id: string | number;
   title: string;
   lastMessage: string;
   timestamp: Date;
@@ -169,7 +170,7 @@ export interface StepDefinition {
 
 export interface Step extends StepDefinition {
   isComplete: boolean;
-  data: SubjectsStepData | null; // ⬅️ NEW (step output)
+  data: unknown | null;
 }
 export type SubjectId = string;
 
@@ -235,4 +236,6 @@ export interface PreferencesStepData {
   breakDurationMinutes?: number;
   studyStyle?: StudyStyle;
   unavailableSlots?: UnavailableSlot[];
+  startDate?: ISODateString;
+  endDate?: ISODateString;
 }

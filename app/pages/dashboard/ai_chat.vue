@@ -5,9 +5,7 @@
         v-if="showHistory"
         class="w-64 shrink-0 rounded-lg border border-default bg-card"
       >
-        <div
-          class="flex items-center justify-between border-b border-default p-4"
-        >
+        <div class="flex items-center justify-between border-b border-default p-4">
           <h3 class="font-semibold text-card-foreground">Chat History</h3>
           <UButton
             icon="i-lucide-x"
@@ -26,33 +24,39 @@
             label="New Chat"
           />
           <div class="space-y-1">
-            <button
+            <div
               v-for="chat in chatHistories"
-              :key="chat.id"
-              @click="loadChat(chat.id)"
+              :key="String(chat.id)"
               :class="[
                 'w-full rounded-lg p-3 text-left transition-colors text-sm',
-                currentChatId === chat.id
+                currentChatId === String(chat.id)
                   ? 'bg-primary/10 text-primary'
                   : 'text-foreground hover:bg-accent',
               ]"
             >
-              <p class="font-medium line-clamp-1">{{ chat.title }}</p>
-              <p class="mt-1 text-xs text-muted-foreground line-clamp-1">
-                {{ chat.lastMessage }}
-              </p>
-              <p class="mt-1 text-xs text-muted-foreground">
-                {{ new Date(chat.timestamp).toLocaleDateString() }}
-              </p>
-            </button>
+              <div class="flex items-center justify-between gap-2">
+                <button
+                  class="min-w-0 flex-1 text-left"
+                  @click="loadChat(chat.id)"
+                >
+                  <p class="font-medium line-clamp-1">{{ chat.title }}</p>
+                </button>
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  @click.stop="deleteChat(chat.id)"
+                  aria-label="Delete chat"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Main Chat Area -->
       <div class="flex flex-1 flex-col overflow-hidden">
-        <!-- Header -->
-        <div class="mb-4 flex items-center justify-between">
+        <div class="mb-4 flex items-start justify-between gap-3">
           <div class="flex items-center gap-2">
             <UButton
               v-if="!showHistory"
@@ -65,23 +69,49 @@
             <div>
               <h2 class="text-3xl font-bold text-foreground">AI Chat</h2>
               <p class="mt-1 text-muted-foreground">
-                Get instant help with your studies
+                Ask questions with your project context.
               </p>
             </div>
           </div>
-          <UButton
-            @click="handleLibraryToggle()"
-            variant="outline"
-            icon="i-lucide-file-text"
-            :label="`Library (${selectedContent.length})`"
-          />
+
+          <div class="flex w-[560px] max-w-full items-center gap-2">
+            <USelect
+              v-model="selectedProjectId"
+              :items="projectOptions"
+              placeholder="Select project"
+              class="min-w-0 flex-1"
+            />
+            <div class="flex items-center gap-2 rounded-md border border-default px-2 py-1">
+              <span class="text-xs text-muted-foreground">Web</span>
+              <USwitch v-model="includeWeb" />
+            </div>
+            <USelect
+              v-model="selectedAiTier"
+              :items="aiTierOptions"
+              :disabled="!aiTierOptions.length"
+              placeholder="AI tier"
+              class="w-44"
+            />
+            <UButton
+              @click="handleLibraryToggle()"
+              variant="outline"
+              icon="i-lucide-file-text"
+              :label="`Library (${selectedContent.length})`"
+              :disabled="!selectedProjectId"
+            />
+          </div>
         </div>
 
-        <!-- Selected Content Chips -->
-        <div
-          v-if="selectedContent.length > 0"
-          class="mb-4 flex flex-wrap gap-2"
-        >
+        <UAlert
+          v-if="!selectedProjectId"
+          class="mb-4"
+          color="warning"
+          variant="soft"
+          title="Select a project to start chatting"
+          description="Adaptive chat is project-based. Pick one project from the dropdown above."
+        />
+
+        <div v-if="selectedContent.length > 0" class="mb-4 flex flex-wrap gap-2">
           <div
             v-for="item in selectedContent"
             :key="item.id"
@@ -99,21 +129,14 @@
           </div>
         </div>
 
-        <!-- Chat Container -->
         <div class="flex flex-1 gap-4 overflow-hidden">
-          <!-- Messages Area -->
-          <div
-            class="flex flex-1 flex-col overflow-hidden rounded-lg border border-default bg-card"
-          >
-            <!-- Messages -->
+          <div class="flex flex-1 flex-col overflow-hidden rounded-lg border border-default bg-card">
             <div class="flex-1 space-y-4 overflow-y-auto p-6">
               <div
                 v-for="message in messages"
                 :key="message.id"
                 class="flex"
-                :class="
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                "
+                :class="message.role === 'user' ? 'justify-end' : 'justify-start'"
               >
                 <div
                   :class="[
@@ -121,7 +144,6 @@
                     message.role === 'user' ? 'flex-row-reverse' : 'flex-row',
                   ]"
                 >
-                  <!-- Avatar -->
                   <div
                     :class="[
                       'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-medium',
@@ -137,7 +159,6 @@
                     />
                     <span v-else>U</span>
                   </div>
-                  <!-- Message Bubble -->
                   <div
                     :class="[
                       'rounded-lg px-4 py-3',
@@ -146,7 +167,36 @@
                         : 'bg-muted text-muted-foreground',
                     ]"
                   >
-                    <p class="text-sm leading-relaxed">{{ message.content }}</p>
+                    <p
+                      v-if="message.role === 'user'"
+                      class="whitespace-pre-wrap text-sm leading-relaxed"
+                    >
+                      {{ message.content }}
+                    </p>
+                    <div
+                      v-else
+                      class="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground"
+                      v-html="renderChatMarkdown(message.content)"
+                    />
+                    <div
+                      v-if="message.sources?.length"
+                      class="mt-3 space-y-1 rounded-md border border-default bg-background/60 p-2"
+                    >
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Sources
+                      </p>
+                      <a
+                        v-for="source in message.sources"
+                        :key="source.sourceId"
+                        :href="source.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="block truncate text-xs text-primary hover:underline"
+                        :title="source.title || source.url"
+                      >
+                        {{ source.title || source.url }}
+                      </a>
+                    </div>
                     <p
                       :class="[
                         'mt-2 text-xs',
@@ -155,13 +205,12 @@
                           : 'text-muted-foreground/70',
                       ]"
                     >
-                      {{ formatTime(message.timestamp) }}
+                      {{ isClientMounted ? formatTime(message.timestamp) : "" }}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <!-- Typing Indicator -->
               <div v-if="isTyping" class="flex justify-start">
                 <div class="flex gap-3">
                   <div
@@ -179,25 +228,20 @@
                         class="h-2 w-2 animate-bounce rounded-full bg-muted-foreground"
                         style="animation-delay: -0.15s"
                       />
-                      <div
-                        class="h-2 w-2 animate-bounce rounded-full bg-muted-foreground"
-                      />
+                      <div class="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Input Area -->
             <div class="border-t border-default p-4">
               <div class="flex items-end gap-2">
-                <div
-                  class="flex-1 rounded-lg border border-border bg-background"
-                >
+                <div class="flex-1 rounded-lg border border-border bg-background">
                   <textarea
                     v-model="inputValue"
-                    @keydown.enter.prevent="handleSend"
-                    placeholder="Ask me anything about your studies..."
+                    @keydown="handleInputKeydown"
+                    placeholder="Ask about this project..."
                     rows="3"
                     class="w-full resize-none bg-transparent p-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                   />
@@ -205,26 +249,24 @@
                 <UButton
                   @click="handleSend"
                   icon="i-lucide-send"
-                  :disabled="!inputValue.trim()"
+                  :disabled="!canSend"
+                  :loading="isTyping"
                   color="primary"
                   size="lg"
                   aria-label="Send message"
                 />
               </div>
               <p class="mt-2 text-xs text-muted-foreground">
-                Press Enter to send, Shift+Enter for new line
+                Press Enter to send, Shift+Enter for new line.
               </p>
             </div>
           </div>
 
-          <!-- Library Sidebar -->
           <div
             v-if="showLibrary"
             class="w-64 shrink-0 rounded-lg border border-default bg-card"
           >
-            <div
-              class="flex items-center justify-between border-b border-default p-4"
-            >
+            <div class="flex items-center justify-between border-b border-default p-4">
               <h3 class="font-semibold text-card-foreground">Select Content</h3>
               <UButton
                 icon="i-lucide-x"
@@ -260,8 +302,8 @@
                     class="h-3 w-3 text-primary-foreground"
                   />
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="font-medium line-clamp-1">{{ item.title }}</p>
+                <div class="min-w-0 flex-1">
+                  <p class="line-clamp-1 font-medium">{{ item.title }}</p>
                   <p class="text-xs text-muted-foreground">{{ item.type }}</p>
                 </div>
               </button>
@@ -276,142 +318,510 @@
 <script setup lang="ts">
 import type { ChatHistory, LibrarySelection } from "~/types";
 import { useIsMobile } from "~/composable/useIsMobile";
-import {
-  LazyAiChatHistorySlideOver,
-  LazyAiChatLibraryDrawer,
-} from "#components";
+import { LazyAiChatHistorySlideOver, LazyAiChatLibraryDrawer } from "#components";
+import { useProjectStore } from "~/stores/projects";
+import { renderChatMarkdown } from "~/utils/chatMarkdown";
+import { normalizeAssistantAnswer } from "~/utils/chatResponse";
 
-type Message = {
-  id: number;
+type UiMessage = {
+  id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  citations?: AdaptiveCitation[];
+  sources?: AdaptiveSource[];
+  toolsUsed?: AdaptiveTool[];
 };
 
-const chatHistories = ref<ChatHistory[]>([
-  {
-    id: 1,
-    title: "Calculus Help",
-    lastMessage: "Can you explain derivatives?",
-    timestamp: new Date(Date.now() - 3600000),
-    messages: [
-      {
-        id: 1,
-        role: "user",
-        content: "Can you explain derivatives?",
-        timestamp: new Date(Date.now() - 3600000),
-      },
-      {
-        id: 2,
-        role: "assistant",
-        content: "Derivatives measure the rate of change of a function...",
-        timestamp: new Date(Date.now() - 3590000),
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: "Biology Questions",
-    lastMessage: "What is photosynthesis?",
-    timestamp: new Date(Date.now() - 7200000),
-    messages: [],
-  },
-]);
+type AdaptiveCitation = {
+  chunkId: string;
+  snippet: string;
+};
 
-const currentChatId = ref<number | null>(null);
-const messages = ref<Message[]>([
-  {
-    id: 1,
-    role: "assistant",
-    content:
-      "Hello! I'm your AI study assistant. I can help you understand concepts, generate questions, summarize documents, and more. You can also select content from your library to chat about. What would you like to work on today?",
-    timestamp: new Date(),
-  },
-]);
+type AdaptiveSource = {
+  sourceId: string;
+  url: string;
+  title: string;
+  snippet: string;
+};
 
-const inputValue = ref("");
-const isTyping = ref(false);
-const showLibrary = ref(false);
-const selectedContent = ref<any[]>([]);
-const showHistory = ref(false);
-const showMobileHistory = ref(false);
+type AdaptiveTool = {
+  name: string;
+  status: string;
+  detail?: string;
+};
+
+type AdaptiveAiItem = {
+  tier: string;
+  provider: string;
+  model: string;
+  isDefault: boolean;
+};
+
+type AdaptiveSessionItem = {
+  sessionId: string;
+  libraryItemId: string | null;
+  libraryTitle: string | null;
+  title: string;
+  updatedAtUtc: string;
+  createdAtUtc: string;
+};
+
+type AdaptiveLibraryItem = {
+  libraryItemId: string;
+  title: string;
+  type: string;
+  updatedAtUtc?: string;
+};
+
+type AdaptiveSessionMessageItem = {
+  messageId: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAtUtc: string;
+};
+
+type AdaptiveChatResponse = {
+  chat?: {
+    sessionId: string;
+    answer: string;
+    aiTier?: string;
+    citations?: AdaptiveCitation[];
+    sources?: AdaptiveSource[];
+    toolsUsed?: AdaptiveTool[];
+  };
+  aiTier?: string;
+};
+
+type AdaptiveChatPayload = {
+  projectId: string;
+  libraryItemId: string | number | null;
+  sessionId: string | null;
+  message: string;
+  aiTier?: string;
+  includeWeb?: boolean;
+};
+
+const { $api } = useNuxtApp();
+const toast = useToast();
+const overlay = useOverlay();
+const projectStore = useProjectStore();
 const { isMobile } = useIsMobile();
 
-const overlay = useOverlay();
-const mobileChatSlideOver = overlay.create(LazyAiChatHistorySlideOver);
+const showLibrary = ref(false);
+const showHistory = ref(false);
+const isTyping = ref(false);
+const inputValue = ref("");
+const isClientMounted = ref(false);
 
-async function showChatHistory() {
-  if (isMobile.value) {
-    showMobileHistory.value = true;
-    await mobileChatSlideOver.open({
-      chats: chatHistories.value,
-      currentChatId: currentChatId.value,
-      onLoadChat: (chatId: number) => {
-        loadChat(chatId);
-        mobileChatSlideOver.close();
-      },
-      onNewChat: () => {
-        startNewChat();
-        mobileChatSlideOver.close();
-      },
+const selectedProjectId = ref("");
+const selectedAiTier = ref("");
+const currentChatId = ref<string | null>(null);
+const includeWeb = ref(true);
+
+const accessibleAis = ref<AdaptiveAiItem[]>([]);
+const sessionItems = ref<AdaptiveSessionItem[]>([]);
+const libraryItems = ref<LibrarySelection[]>([]);
+const selectedContent = ref<LibrarySelection[]>([]);
+const messages = ref<UiMessage[]>([]);
+const messagesBySession = ref<Record<string, UiMessage[]>>({});
+
+const mobileChatSlideOver = overlay.create(LazyAiChatHistorySlideOver);
+const mobileLibraryDrawer = overlay.create(LazyAiChatLibraryDrawer);
+
+const welcomeMessage = computed<UiMessage>(() => ({
+  id: crypto.randomUUID(),
+  role: "assistant",
+  content: selectedProjectId.value
+    ? "Chat ready. Ask anything about this project. Select one library item for tighter context if needed."
+    : "Select a project first to start adaptive chat.",
+  timestamp: new Date(),
+}));
+
+const projectOptions = computed(() =>
+  projectStore.allProjects.map((project) => ({
+    label: project.title,
+    value: project.documentId,
+  })),
+);
+
+const aiTierOptions = computed(() =>
+  accessibleAis.value.map((item) => ({
+    label: `${item.tier} (${item.provider})`,
+    value: item.tier,
+  })),
+);
+
+const chatHistories = computed<ChatHistory[]>(() =>
+  sessionItems.value.map((session, index) => {
+    const sessionMessages = messagesBySession.value[session.sessionId] || [];
+    const assistantMessage = [...sessionMessages]
+      .reverse()
+      .find((message) => message.role === "assistant");
+
+    return {
+      id: session.sessionId || `session-${index}`,
+      title: session.title || "Chat session",
+      lastMessage: assistantMessage?.content || session.title || "No messages yet",
+      timestamp: new Date(session.updatedAtUtc || session.createdAtUtc || Date.now()),
+      messages: sessionMessages.map((message, messageIndex) => ({
+        id: messageIndex + 1,
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp,
+      })),
+    };
+  }),
+);
+
+const canSend = computed(
+  () => Boolean(inputValue.value.trim()) && Boolean(selectedProjectId.value),
+);
+
+const formatTime = (date: Date) =>
+  new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+const isSelected = (item: LibrarySelection) =>
+  selectedContent.value.some((current) => String(current.id) === String(item.id));
+
+const hasSelectedTier = computed(() =>
+  accessibleAis.value.some((item) => item.tier === selectedAiTier.value),
+);
+
+const getSessionStorageKey = (projectId: string) =>
+  `adaptive-chat:${projectId}:sessions`;
+
+const toUiMessage = (message: any): UiMessage => ({
+  id: String(message?.id || crypto.randomUUID()),
+  role: message?.role === "user" ? "user" : "assistant",
+  content: String(message?.content || ""),
+  timestamp: new Date(message?.timestamp || Date.now()),
+  citations: Array.isArray(message?.citations) ? message.citations : [],
+  sources: Array.isArray(message?.sources) ? message.sources : [],
+  toolsUsed: Array.isArray(message?.toolsUsed) ? message.toolsUsed : [],
+});
+
+const normalizeSessionItems = (response: any): AdaptiveSessionItem[] => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.items)) return response.items;
+  return [];
+};
+
+const persistSessionsToStorage = () => {
+  if (!process.client || !selectedProjectId.value) return;
+  localStorage.setItem(
+    getSessionStorageKey(selectedProjectId.value),
+    JSON.stringify(messagesBySession.value),
+  );
+};
+
+const hydrateSessionsFromStorage = (projectId: string) => {
+  if (!process.client || !projectId) return;
+  const raw = localStorage.getItem(getSessionStorageKey(projectId));
+  if (!raw) {
+    messagesBySession.value = {};
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Record<string, any[]>;
+    const hydrated: Record<string, UiMessage[]> = {};
+
+    Object.entries(parsed || {}).forEach(([sessionId, sessionMessages]) => {
+      hydrated[sessionId] = Array.isArray(sessionMessages)
+        ? sessionMessages.map(toUiMessage)
+        : [];
     });
-  } else {
-    showHistory.value = true;
+
+    messagesBySession.value = hydrated;
+  } catch {
+    messagesBySession.value = {};
+  }
+};
+
+const isAdaptiveProcessingError = (error: any) => {
+  const message = String(
+    error?.data?.message || error?.statusMessage || error?.message || "",
+  ).toLowerCase();
+  return (
+    message.includes("failed to process adaptive chat") ||
+    message.includes("requested ai tier is configured") ||
+    message.includes("processable content")
+  );
+};
+
+const persistCurrentMessages = () => {
+  if (!currentChatId.value) return;
+  messagesBySession.value[currentChatId.value] = [...messages.value];
+  persistSessionsToStorage();
+};
+
+const resetChatView = () => {
+  currentChatId.value = null;
+  messages.value = [welcomeMessage.value];
+  selectedContent.value = [];
+};
+
+async function fetchProjectsIfNeeded() {
+  if (projectStore.allProjects.length > 0) return;
+  await projectStore.fetchProjects(1, 100);
+}
+
+async function fetchAccessibleAis(projectId: string) {
+  const response = await $api.fetch<{ items?: AdaptiveAiItem[] }>(
+    `/api/projects/${projectId}/adaptive/chat/ais`,
+    { method: "GET" },
+  );
+  accessibleAis.value = Array.isArray(response?.items) ? response.items : [];
+
+  if (!selectedAiTier.value) {
+    selectedAiTier.value =
+      accessibleAis.value.find((item) => item.isDefault)?.tier ||
+      accessibleAis.value[0]?.tier ||
+      "";
   }
 }
 
-const libraryItems = ref<LibrarySelection[]>([
-  { id: 1, title: "Advanced Calculus Notes", type: "pdf" },
-  { id: 2, title: "Biology Chapter 5", type: "docx" },
-  { id: 3, title: "Chemistry Lab Report", type: "note" },
-  { id: 4, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 5, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 6, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 7, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 8, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 9, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 10, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 11, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 12, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 13, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 14, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 15, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 16, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 17, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 18, title: "Physics Formula Sheet", type: "pdf" },
-  { id: 19, title: "Physics Formula Sheet", type: "pdf" },
-]);
+async function fetchChatLibraries(projectId: string) {
+  const response = await $api.fetch<{ items?: AdaptiveLibraryItem[] }>(
+    `/api/projects/${projectId}/adaptive/chat/libraries`,
+    { method: "GET" },
+  );
+  const items = Array.isArray(response?.items) ? response.items : [];
+  libraryItems.value = items.map((item) => ({
+    id: item.libraryItemId,
+    title: item.title,
+    type: String(item.type || "Unknown"),
+  }));
+}
 
-const formatTime = (date: Date) => {
-  const d = new Date(date);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-};
+async function fetchSessions(projectId: string) {
+  const response = await $api.fetch<{ items?: AdaptiveSessionItem[] } | AdaptiveSessionItem[]>(
+    `/api/projects/${projectId}/adaptive/chat/sessions`,
+    { method: "GET" },
+  );
+  sessionItems.value = normalizeSessionItems(response);
+}
 
-const isSelected = (item: any) => {
-  return selectedContent.value.some((c) => c.id === item.id);
-};
-const mobileLibraryDrawer = overlay.create(LazyAiChatLibraryDrawer);
-const handleLibraryToggle = async () => {
-  if (isMobile.value) {
-    await mobileLibraryDrawer.open({
-      selected: selectedContent.value,
-      items: libraryItems.value,
-      "onUpdate:selected": (items: LibrarySelection[]) => {
-        selectedContent.value = items;
-      },
+async function fetchSessionMessages(projectId: string, sessionId: string) {
+  const response = await $api.fetch<{ items?: AdaptiveSessionMessageItem[] } | AdaptiveSessionMessageItem[]>(
+    `/api/projects/${projectId}/adaptive/chat/sessions/${sessionId}/messages`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(response)
+    ? response
+    : Array.isArray(response?.items)
+      ? response.items
+      : [];
+
+  return items.map((item) => ({
+    id: item.messageId,
+    role: item.role === "user" ? "user" : "assistant",
+    content: item.content || "",
+    timestamp: new Date(item.createdAtUtc || Date.now()),
+  })) as UiMessage[];
+}
+
+async function loadProjectContext(projectId: string) {
+  if (!projectId) return;
+
+  try {
+    hydrateSessionsFromStorage(projectId);
+
+    await Promise.all([
+      fetchAccessibleAis(projectId),
+      fetchChatLibraries(projectId),
+      fetchSessions(projectId),
+    ]);
+
+    if (!currentChatId.value) {
+      messages.value = [welcomeMessage.value];
+    }
+
+    if (!isMobile.value && sessionItems.value.length > 0) {
+      showHistory.value = true;
+    }
+  } catch (error: any) {
+    toast.add({
+      title: "Chat setup failed",
+      description: error?.message || "Could not load project chat context.",
+      color: "error",
     });
-  } else {
-    showLibrary.value = !showLibrary.value;
   }
-};
+}
 
-const handleSend = () => {
-  if (!inputValue.value.trim()) return;
+function toggleContentSelection(item: LibrarySelection) {
+  if (isSelected(item)) {
+    selectedContent.value = [];
+    return;
+  }
+  selectedContent.value = [item];
+}
 
-  const userMessage: Message = {
-    id: messages.value.length + 1,
+function hydrateSelectedLibraryForSession(sessionId: string) {
+  const session = sessionItems.value.find((item) => item.sessionId === sessionId);
+  const libraryItemId = session?.libraryItemId;
+
+  if (!libraryItemId) {
+    selectedContent.value = [];
+    return;
+  }
+
+  const existing = libraryItems.value.find(
+    (item) => String(item.id) === String(libraryItemId),
+  );
+
+  if (existing) {
+    selectedContent.value = [existing];
+    return;
+  }
+
+  selectedContent.value = [
+    {
+      id: libraryItemId,
+      title: session?.libraryTitle || "Selected library",
+      type: "Unknown",
+    },
+  ];
+}
+
+async function loadChat(chatId: string | number) {
+  persistCurrentMessages();
+  const normalizedId = String(chatId);
+  currentChatId.value = normalizedId;
+  hydrateSelectedLibraryForSession(normalizedId);
+
+  const saved = messagesBySession.value[normalizedId];
+  if (saved?.length) {
+    messages.value = [...saved];
+  }
+
+  try {
+    const sessionMessages = await fetchSessionMessages(
+      selectedProjectId.value,
+      normalizedId,
+    );
+
+    if (sessionMessages.length > 0) {
+      messages.value = sessionMessages;
+      messagesBySession.value[normalizedId] = sessionMessages;
+      persistSessionsToStorage();
+      return;
+    }
+  } catch (error: any) {
+    if (!saved?.length) {
+      toast.add({
+        title: "Unable to load session",
+        description:
+          error?.message || "Could not fetch messages for this chat session.",
+        color: "error",
+      });
+    }
+  }
+
+  if (saved?.length) return;
+  messages.value = [];
+}
+
+async function deleteChat(chatId: string | number) {
+  if (!selectedProjectId.value) return;
+
+  const normalizedId = String(chatId);
+  try {
+    await $api.mutate(
+      `/api/projects/${selectedProjectId.value}/adaptive/chat/sessions/${normalizedId}`,
+      {
+        method: "DELETE",
+      },
+    );
+
+    sessionItems.value = sessionItems.value.filter(
+      (session) => session.sessionId !== normalizedId,
+    );
+
+    delete messagesBySession.value[normalizedId];
+    persistSessionsToStorage();
+
+    if (currentChatId.value === normalizedId) {
+      resetChatView();
+    }
+
+    toast.add({
+      title: "Chat deleted",
+      description: "The chat session was deleted successfully.",
+      color: "success",
+    });
+  } catch (error: any) {
+    toast.add({
+      title: "Delete failed",
+      description: error?.message || "Could not delete this chat session.",
+      color: "error",
+    });
+  }
+}
+
+function startNewChat() {
+  persistCurrentMessages();
+  resetChatView();
+}
+
+async function showChatHistory() {
+  if (!isMobile.value) {
+    showHistory.value = true;
+    return;
+  }
+
+  await mobileChatSlideOver.open({
+    chats: chatHistories.value,
+    currentChatId: currentChatId.value,
+    onLoadChat: (chatId: string | number) => {
+      void loadChat(chatId);
+      mobileChatSlideOver.close();
+    },
+    onDeleteChat: (chatId: string | number) => {
+      void deleteChat(chatId);
+      mobileChatSlideOver.close();
+    },
+    onNewChat: () => {
+      startNewChat();
+      mobileChatSlideOver.close();
+    },
+  });
+}
+
+async function handleLibraryToggle() {
+  if (!selectedProjectId.value) return;
+
+  if (!isMobile.value) {
+    showLibrary.value = !showLibrary.value;
+    return;
+  }
+
+  await mobileLibraryDrawer.open({
+    selected: selectedContent.value,
+    items: libraryItems.value,
+    "onUpdate:selected": (items: LibrarySelection[]) => {
+      selectedContent.value = items;
+    },
+  });
+}
+
+function handleInputKeydown(event: KeyboardEvent) {
+  if (event.key !== "Enter") return;
+  if (event.shiftKey) return;
+  event.preventDefault();
+  void handleSend();
+}
+
+async function handleSend() {
+  if (!canSend.value || isTyping.value) return;
+
+  const prompt = inputValue.value.trim();
+  const userMessage: UiMessage = {
+    id: crypto.randomUUID(),
     role: "user",
-    content: inputValue.value,
+    content: prompt,
     timestamp: new Date(),
   };
 
@@ -419,68 +829,157 @@ const handleSend = () => {
   inputValue.value = "";
   isTyping.value = true;
 
-  setTimeout(() => {
-    let responseContent = `I understand you're asking about "${userMessage.content}".`;
+  try {
+    const basePayload: AdaptiveChatPayload = {
+      projectId: selectedProjectId.value,
+      libraryItemId: selectedContent.value[0]?.id || null,
+      sessionId: currentChatId.value,
+      message: prompt,
+      aiTier: hasSelectedTier.value ? selectedAiTier.value || undefined : undefined,
+      includeWeb: includeWeb.value,
+    };
 
-    if (selectedContent.value.length > 0) {
-      const titles = selectedContent.value.map((c) => c.title).join(", ");
-      responseContent += ` Based on the materials you've selected (${titles}), `;
+    const attempts: Array<{
+      payload: AdaptiveChatPayload;
+      mode: "primary" | "no-library" | "default-tier" | "safe-default";
+    }> = [
+      { payload: basePayload, mode: "primary" },
+      {
+        payload: { ...basePayload, libraryItemId: null },
+        mode: "no-library",
+      },
+      {
+        payload: { ...basePayload, aiTier: undefined },
+        mode: "default-tier",
+      },
+      {
+        payload: { ...basePayload, libraryItemId: null, aiTier: undefined },
+        mode: "safe-default",
+      },
+    ];
+
+    let response: AdaptiveChatResponse | null = null;
+    let usedMode: (typeof attempts)[number]["mode"] = "primary";
+    let lastError: any = null;
+
+    for (const attempt of attempts) {
+      if (attempt.mode === "no-library" && !basePayload.libraryItemId) continue;
+      if (attempt.mode === "default-tier" && !basePayload.aiTier) continue;
+      if (
+        attempt.mode === "safe-default" &&
+        !basePayload.libraryItemId &&
+        !basePayload.aiTier
+      ) {
+        continue;
+      }
+
+      try {
+        response = await $api.mutate<AdaptiveChatResponse>(
+          `/api/projects/${selectedProjectId.value}/adaptive/chat`,
+          {
+            method: "POST",
+            body: attempt.payload,
+          },
+        );
+        usedMode = attempt.mode;
+        break;
+      } catch (error: any) {
+        lastError = error;
+        if (!isAdaptiveProcessingError(error)) {
+          throw error;
+        }
+      }
     }
 
-    responseContent +=
-      " Let me help you with that. This is a simulated response demonstrating the AI chat functionality with context from your library materials.";
+    if (!response) {
+      throw lastError || new Error("Could not process adaptive chat.");
+    }
 
-    const aiMessage: Message = {
-      id: messages.value.length + 1,
+    const rawAnswer =
+      response?.chat?.answer ??
+      (response as any)?.answer ??
+      (response as any)?.chat ??
+      response ??
+      "No response received.";
+    const answer = normalizeAssistantAnswer(rawAnswer);
+    const sessionId = response?.chat?.sessionId || currentChatId.value;
+
+    if (sessionId) {
+      currentChatId.value = String(sessionId);
+    }
+
+    messages.value.push({
+      id: crypto.randomUUID(),
       role: "assistant",
-      content: responseContent,
+      content: answer,
       timestamp: new Date(),
-    };
-    messages.value.push(aiMessage);
+      citations: response?.chat?.citations || [],
+      sources: response?.chat?.sources || [],
+      toolsUsed: response?.chat?.toolsUsed || [],
+    });
+
+    persistCurrentMessages();
+    await fetchSessions(selectedProjectId.value);
+
+    if (usedMode !== "primary") {
+      if (usedMode === "no-library" || usedMode === "safe-default") {
+        selectedContent.value = [];
+      }
+      if (usedMode === "default-tier" || usedMode === "safe-default") {
+        selectedAiTier.value =
+          accessibleAis.value.find((item) => item.isDefault)?.tier ||
+          accessibleAis.value[0]?.tier ||
+          "";
+      }
+
+      toast.add({
+        title: "Chat sent with fallback",
+        description:
+          usedMode === "no-library"
+            ? "Selected library could not be processed. Sent without library context."
+            : usedMode === "default-tier"
+              ? "Selected AI tier was unavailable. Sent using the default tier."
+              : "Selected tier/library failed. Sent using default settings.",
+        color: "warning",
+      });
+    }
+  } catch (error: any) {
+    toast.add({
+      title: "Message failed",
+      description: error?.message || "Could not send your message.",
+      color: "error",
+    });
+  } finally {
     isTyping.value = false;
-  }, 2000);
-};
-
-const toggleContentSelection = (item: any) => {
-  if (isSelected(item)) {
-    selectedContent.value = selectedContent.value.filter(
-      (c) => c.id !== item.id
-    );
-  } else {
-    selectedContent.value.push(item);
   }
-};
+}
 
-const loadChat = (chatId: number) => {
-  const chat = chatHistories.value.find((c) => c.id === chatId);
-  if (chat) {
-    currentChatId.value = chatId;
-    messages.value =
-      chat.messages.length > 0
-        ? [...chat.messages]
-        : [
-            {
-              id: 1,
-              role: "assistant",
-              content: "Chat loaded. How can I help you?",
-              timestamp: new Date(),
-            },
-          ];
+watch(selectedProjectId, async (projectId) => {
+  resetChatView();
+  await loadProjectContext(projectId);
+});
+
+onMounted(async () => {
+  isClientMounted.value = true;
+  try {
+    await fetchProjectsIfNeeded();
+
+    if (!selectedProjectId.value && projectOptions.value.length > 0) {
+      selectedProjectId.value = String(projectOptions.value[0]?.value || "");
+    } else if (selectedProjectId.value) {
+      await loadProjectContext(selectedProjectId.value);
+    } else {
+      messages.value = [welcomeMessage.value];
+    }
+  } catch (error: any) {
+    toast.add({
+      title: "Initialization failed",
+      description: error?.message || "Could not load AI chat.",
+      color: "error",
+    });
+    messages.value = [welcomeMessage.value];
   }
-};
-
-const startNewChat = () => {
-  currentChatId.value = null;
-  messages.value = [
-    {
-      id: 1,
-      role: "assistant",
-      content: "New chat started. How can I help you today?",
-      timestamp: new Date(),
-    },
-  ];
-  selectedContent.value = [];
-};
+});
 
 definePageMeta({
   layout: "dashboard",

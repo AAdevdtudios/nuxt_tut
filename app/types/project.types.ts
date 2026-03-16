@@ -48,9 +48,11 @@ export interface ProjectItem {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
+  libraryIds?: string[];
   libraries?: ProjectLibrary[];
   librariesCount: number; // Count of non-note libraries
   notesCount: number; // Count of note libraries
+  progressLevel?: number | null;
 }
 
 /**

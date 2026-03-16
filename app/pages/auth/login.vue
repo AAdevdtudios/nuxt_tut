@@ -65,6 +65,21 @@ const showError = ref(false);
 const pending = ref(false);
 const errorMessage = ref("");
 const auth = useAuthStore();
+const route = useRoute();
+
+const redirectTarget = computed(() => {
+  const redirect = route.query.redirect;
+
+  if (typeof redirect !== "string" || !redirect.startsWith("/")) {
+    return "/dashboard";
+  }
+
+  return redirect;
+});
+
+if (auth.hasSession) {
+  await navigateTo(redirectTarget.value);
+}
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   showError.value = false;
@@ -76,7 +91,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       title: "Success",
       description: "Logged in successfully",
     });
-    await navigateTo("/");
+    await navigateTo(redirectTarget.value);
   } catch (error: any) {
     errorMessage.value = error?.message || "Login failed. Please try again.";
     showError.value = true;

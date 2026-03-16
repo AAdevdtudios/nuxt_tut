@@ -110,11 +110,10 @@ watch(
       prioritySubjects: prioritySubjects.value,
     };
 
-    // Minimum 3 subjects required
-    if (subjects.value.length < 3) {
+    if (subjects.value.length < 1) {
       if (isComplete.value !== false) isComplete.value = false;
       if (data.value !== null) data.value = null;
-      error.value = "Minimum 3 subjects required";
+      error.value = "Add at least one subject";
       return;
     }
 

@@ -1,10 +1,16 @@
 <template>
   <UModal
+    v-model:open="isOpen"
     title="Create New Project"
     description="Fill out the details below to create a new project."
     size="lg"
   >
-    <UButton label="New Project" icon="i-lucide-plus" color="primary" />
+    <UButton
+      label="New Project"
+      icon="i-lucide-plus"
+      color="primary"
+      @click="isOpen = true"
+    />
     <template #body>
       <div class="flex flex-col gap-4">
         <!-- Title Field -->
@@ -146,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import type { ProjectIcon } from "~/types/project.types";
 import { ICONS } from "~/constants/projects.const";
 import {
@@ -167,6 +173,10 @@ const emit = defineEmits<{
 
 const form = useProjectForm();
 const formData = form.formData;
+const isOpen = computed({
+  get: () => props.modelValue,
+  set: (value: boolean) => emit("update:modelValue", value),
+});
 
 function handleSubmit() {
   if (!form.validateForm()) return;
@@ -176,6 +186,15 @@ function handleSubmit() {
 function closeModal() {
   emit("update:modelValue", false);
 }
+
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (!open) {
+      form.resetForm();
+    }
+  },
+);
 
 // Use ICONS constant for icon options if not provided
 const iconOptionsProp = computed(() => {

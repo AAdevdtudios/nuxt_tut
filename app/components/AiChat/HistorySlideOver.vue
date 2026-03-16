@@ -16,10 +16,9 @@
           label="New Chat"
         />
         <div class="space-y-1">
-          <button
+          <div
             v-for="chat in chats"
             :key="chat.id"
-            @click="emit('loadChat', chat.id)"
             :class="[
               'w-full rounded-lg p-3 text-left transition-colors text-sm',
               currentChatId === chat.id
@@ -27,14 +26,23 @@
                 : 'text-foreground hover:bg-accent',
             ]"
           >
-            <p class="font-medium line-clamp-1">{{ chat.title }}</p>
-            <p class="mt-1 text-xs text-muted-foreground line-clamp-1">
-              {{ chat.lastMessage }}
-            </p>
-            <p class="mt-1 text-xs text-muted-foreground">
-              {{ new Date(chat.timestamp).toLocaleDateString() }}
-            </p>
-          </button>
+            <div class="flex items-center justify-between gap-2">
+              <button
+                class="min-w-0 flex-1 text-left"
+                @click="emit('loadChat', chat.id)"
+              >
+                <p class="font-medium line-clamp-1">{{ chat.title }}</p>
+              </button>
+              <UButton
+                icon="i-lucide-trash-2"
+                color="error"
+                variant="ghost"
+                size="xs"
+                @click.stop="emit('deleteChat', chat.id)"
+                aria-label="Delete chat"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -46,12 +54,13 @@ import type { ChatHistory } from "~/types";
 
 defineProps<{
   chats: ChatHistory[];
-  currentChatId: number | null;
+  currentChatId: string | number | null;
 }>();
 
 const emit = defineEmits<{
   (e: "close", value: boolean): void;
   (e: "newChat"): void;
-  (e: "loadChat", chatId: number): void;
+  (e: "loadChat", chatId: string | number): void;
+  (e: "deleteChat", chatId: string | number): void;
 }>();
 </script>

@@ -125,9 +125,9 @@ export const libraryTypeOptions = [
 export type LibraryTypeValue = (typeof libraryTypeOptions)[number]["value"];
 
 export interface LibrarySelection {
-  id: number;
+  id: string | number;
   title: string;
-  type: LibraryTypeValue;
+  type: string;
 }
 
 /**

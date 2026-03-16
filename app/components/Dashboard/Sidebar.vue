@@ -1,89 +1,94 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
+import { computed } from "vue";
 import { ProjectService } from "~/services/projectService";
 import type { ProjectIcon } from "~/types/project.types";
+import { useAuthStore } from "~/stores/auth";
+import LogoutBtn from "../Utils/LogoutBtn.vue";
 const route = useRoute();
 const projectStore = useProjectStore();
+const auth = useAuthStore();
 const { initialize } = useStoreInitializer();
+const projectService = new ProjectService();
 
-const items = ref<NavigationMenuItem[][]>([
-  [
-    {
-      label: "Dashboard",
-      icon: "i-lucide-layout-dashboard",
-      to: "/dashboard",
-    },
-    {
-      label: "Library",
-      icon: "i-lucide-library-big",
-      to: "/dashboard/library",
-    },
-    {
-      label: "AI Chat",
-      icon: "i-lucide-bot-message-square",
-      to: "/dashboard/ai_chat",
-    },
-    {
-      label: "Projects",
-      icon: "i-lucide-folder-kanban",
-      defaultOpen: true,
-      to: "/dashboard/projects",
-      children: [],
-    },
-    {
-      label: "Timetable",
-      icon: "i-lucide-calendar",
-      to: "/dashboard/timetable",
-    },
-    {
-      label: "Question Generator",
-      icon: "i-lucide-circle-help",
-      to: "/dashboard/question_generator",
-    },
-    {
-      label: "Explore",
-      icon: "i-lucide-telescope",
-      to: "/dashboard/explore",
-    },
-    {
-      label: "Settings",
-      icon: "i-lucide-settings",
-      to: "/dashboard/settings",
-    },
-  ],
-  [
-    {
-      label: "Feedback",
-      icon: "i-lucide-message-circle",
-      to: "https://github.com/nuxt-ui-templates/dashboard",
-      target: "_blank",
-    },
-    {
-      label: "Help & Support",
-      icon: "i-lucide-info",
-      to: "https://github.com/nuxt/ui",
-      target: "_blank",
-    },
-  ],
-]);
+const displayName = computed(() => {
+  const value = auth.currentUser?.displayName?.trim();
+  return value || "Profile";
+});
 
-onMounted(async () => {
-  // Initialize store with cached data
-  await initialize();
-  const projectService = new ProjectService();
+const avatarText = computed(() => {
+  const name = displayName.value;
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+});
 
-  // Map projects from store to navigation items
-  const projects = Object.values(projectStore.projectsById).map((project) => ({
+const projectMenuChildren = computed<NavigationMenuItem[]>(() =>
+  projectStore.allProjects.map((project) => ({
     label: project.title,
     icon: projectService.getIconName(project.icons as ProjectIcon),
     to: `/dashboard/projects/${project.documentId}`,
-  }));
+  })),
+);
 
-  const projectsItem = items.value[0]?.[3];
+const primaryItems = computed<NavigationMenuItem[]>(() => [
+  {
+    label: "Dashboard",
+    icon: "i-lucide-layout-dashboard",
+    to: "/dashboard",
+  },
+  {
+    label: "Library",
+    icon: "i-lucide-library-big",
+    to: "/dashboard/library",
+  },
+  {
+    label: "Projects",
+    icon: "i-lucide-folder-kanban",
+    defaultOpen: true,
+    to: "/dashboard/projects",
+    children: projectMenuChildren.value,
+  },
+  {
+    label: "Timetable",
+    icon: "i-lucide-calendar",
+    to: "/dashboard/timetable",
+  },
+  {
+    label: "Explore",
+    icon: "i-lucide-telescope",
+    to: "/dashboard/explore",
+  },
+  {
+    label: "Settings",
+    icon: "i-lucide-settings",
+    to: "/dashboard/settings",
+  },
+]);
 
-  if (projectsItem) {
-    projectsItem.children = projects;
-  }
+const secondaryItems: NavigationMenuItem[] = [
+  {
+    label: "Feedback",
+    icon: "i-lucide-message-circle",
+    to: "/dashboard/feedback",
+  },
+  {
+    label: "Coming Soon",
+    icon: "i-lucide-rocket",
+    to: "/dashboard/coming-soon",
+  },
+  {
+    label: "Help & Support",
+    icon: "i-lucide-info",
+    to: "/dashboard/help",
+  },
+];
+
+onMounted(async () => {
+  await initialize();
 });
 </script>
 
@@ -121,28 +126,34 @@ onMounted(async () => {
     <template #default="{ collapsed }">
       <UNavigationMenu
         :collapsed="collapsed"
-        :items="items[0]"
+        :items="primaryItems"
         orientation="vertical"
       />
-
       <UNavigationMenu
         :collapsed="collapsed"
-        :items="items[1]"
+        :items="secondaryItems"
         orientation="vertical"
         class="mt-auto"
+      />
+      <LogoutBtn
+        :text="collapsed ? undefined : 'Logout'"
+        size="md"
+        withIcon
+        variant="ghost"
       />
     </template>
 
     <template #footer="{ collapsed }">
       <UButton
         :avatar="{
-          src: 'https://github.com/benjamincanac.png',
+          text: avatarText,
         }"
-        :label="collapsed ? undefined : 'Benjamin'"
+        :label="collapsed ? undefined : displayName"
         color="neutral"
         variant="ghost"
         class="w-full"
         :block="collapsed"
+        to="/dashboard/settings"
       />
     </template>
   </UDashboardSidebar>

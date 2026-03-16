@@ -34,6 +34,7 @@ export interface NormalizedProject {
   libraryIds: string[]; // Only store IDs, not full objects
   librariesCount: number;
   notesCount: number;
+  progressLevel?: number | null;
 }
 
 export const useProjectStore = defineStore("projects", () => {
@@ -283,10 +284,14 @@ export const useProjectStore = defineStore("projects", () => {
  * Normalize project data: Extract libraries, keep only IDs
  */
 export function normalizeProject(project: any): NormalizedProject {
-  const libraries = project.libraries || [];
-  const libraryIds = libraries
+  const libraries = Array.isArray(project.libraries) ? project.libraries : [];
+  const derivedLibraryIds = libraries
     .map((lib: any) => String(lib.id || lib.documentId || ""))
     .filter(Boolean);
+  const apiLibraryIds = Array.isArray(project.libraryIds)
+    ? project.libraryIds.map((id: any) => String(id)).filter(Boolean)
+    : [];
+  const libraryIds = Array.from(new Set([...apiLibraryIds, ...derivedLibraryIds]));
 
   return {
     id: String(project.id || project.documentId || ""),
@@ -301,7 +306,11 @@ export function normalizeProject(project: any): NormalizedProject {
     updatedAt: project.updatedAt,
     publishedAt: project.publishedAt,
     libraryIds, // Only IDs, not full objects
-    librariesCount: project.librariesCount || 0,
-    notesCount: project.notesCount || 0,
+    librariesCount: Number(project.librariesCount ?? 0),
+    notesCount: Number(project.notesCount ?? 0),
+    progressLevel:
+      project.progressLevel === null || project.progressLevel === undefined
+        ? null
+        : Number(project.progressLevel),
   };
 }

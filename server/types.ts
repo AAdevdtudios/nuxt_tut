@@ -39,6 +39,7 @@ export interface SubscriptionInfo {
 export interface UserProfile {
   id: string;
   email: string;
+  name?: string;
   displayName: string;
   role: string;
   createdAtUtc: string;

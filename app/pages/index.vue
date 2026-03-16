@@ -1,46 +1,148 @@
-<script lang="ts" setup>
+<script setup lang="ts">
+import * as z from "zod";
+import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
 import { useAuthStore } from "~/stores/auth";
-const counter = useState<number>("counter", () => 0);
+
+definePageMeta({
+  layout: "auth",
+});
+
+const route = useRoute();
 const auth = useAuthStore();
+const toast = useToast();
+
+const fields: AuthFormField[] = [
+  {
+    name: "email",
+    type: "email",
+    label: "Email",
+    autocomplete: "email",
+    placeholder: "Enter your email",
+    required: true,
+  },
+  {
+    name: "password",
+    label: "Password",
+    type: "password",
+    autocomplete: "password",
+    placeholder: "Enter your password",
+    required: true,
+  },
+  {
+    name: "remember",
+    autocomplete: "remember-me",
+    label: "Remember me",
+    type: "checkbox",
+  },
+];
+
+const providers = [
+  {
+    label: "Google",
+    icon: "i-simple-icons-google",
+    onClick: () => {
+      toast.add({ title: "Google", description: "Login with Google" });
+    },
+  },
+  {
+    label: "GitHub",
+    icon: "i-simple-icons-github",
+    onClick: () => {
+      toast.add({ title: "GitHub", description: "Login with GitHub" });
+    },
+  },
+];
+
+const schema = z.object({
+  email: z.email("Invalid email"),
+  password: z
+    .string("Password is required")
+    .min(8, "Must be at least 8 characters"),
+});
+
+type Schema = z.output<typeof schema>;
+
+const showError = ref(false);
+const pending = ref(false);
+const errorMessage = ref("");
+
+const redirectTarget = computed(() => {
+  const redirect = route.query.redirect;
+
+  if (typeof redirect !== "string" || !redirect.startsWith("/")) {
+    return "/dashboard";
+  }
+
+  return redirect;
+});
+
+if (auth.hasSession) {
+  await navigateTo(redirectTarget.value);
+}
+
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  showError.value = false;
+  pending.value = true;
+
+  try {
+    await auth.login(payload.data);
+    await auth.fetchCurrentUser();
+    toast.add({
+      title: "Success",
+      description: "Logged in successfully",
+    });
+    await navigateTo(redirectTarget.value);
+  } catch (error: any) {
+    errorMessage.value = error?.message || "Login failed. Please try again.";
+    showError.value = true;
+  } finally {
+    pending.value = false;
+  }
+}
 </script>
 
 <template>
-  <div>
-    <h1 class="text-5xl font-bold">Welcome to the Home Page</h1>
-    <div v-if="auth.currentUser">
-      <h2 class="text-2xl mt-6 mb-2">User Info</h2>
-      <ul class="mb-4">
-        <li><strong>ID:</strong> {{ auth.currentUser.id }}</li>
-        <li><strong>Name:</strong> {{ auth.currentUser.displayName }}</li>
-        <li><strong>Email:</strong> {{ auth.currentUser.email }}</li>
-        <li><strong>Role:</strong> {{ auth.currentUser.role }}</li>
-        <li>
-          <strong>Locked:</strong>
-          {{ auth.currentUser.isLocked ? "Yes" : "No" }}
-        </li>
-        <li v-if="auth.currentUser.subscription">
-          <strong>Plan:</strong> {{ auth.currentUser.subscription.planName }}
-        </li>
-      </ul>
-    </div>
-    <button
-      v-if="auth.currentUser"
-      @click="auth.logout()"
-      class="mt-2 px-4 py-2 bg-red-500 text-white rounded"
+  <div class="flex flex-col items-center justify-center gap-4 p-4">
+    <AuthForms
+      :fields="fields"
+      :providers="providers"
+      :schema="schema"
+      :loading="pending"
+      title="Welcome back!"
+      icon="i-lucide-log-in"
+      @submit="onSubmit"
     >
-      Logout
-    </button>
-    <p class="mt-4">Counter: {{ counter }}</p>
-    <button
-      class="mt-4 px-4 py-2 bg-green-500 text-white rounded"
-      @click="counter++"
-    >
-      Increment Counter
-    </button>
-    <NuxtLink
-      to="/about"
-      class="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded"
-      >Go to About Page</NuxtLink
-    >
+      <template #description>
+        Don't have an account?
+        <ULink to="/auth/register" class="text-primary font-medium"
+          >Sign up</ULink
+        >.
+      </template>
+      <template #password-hint>
+        <ULink
+          to="/auth/forgot-password"
+          class="text-primary font-medium"
+          tabindex="-1"
+          >Forgot your password?</ULink
+        >
+      </template>
+      <template #validation>
+        <div v-if="showError" class="text-red-500">
+          {{ errorMessage || "Login failed. Please try again." }}
+        </div>
+      </template>
+      <template #footer>
+        <div class="text-sm text-center text-muted-foreground">
+          By logging in, you agree to our
+          <ULink to="/terms" class="text-primary font-medium"
+            >Terms of Service</ULink
+          >
+          and
+          <ULink to="/privacy" class="text-primary font-medium"
+            >Privacy Policy</ULink
+          >.
+        </div>
+      </template>
+    </AuthForms>
   </div>
 </template>

@@ -10,6 +10,7 @@ export const envSchema = z.object({
     REFRESH: z.string().min(1),
     ME: z.string().min(1),
     LOGOUT: z.string().min(1),
+    UPDATE_PROFILE_NAME: z.string().min(1),
   }),
   API_ENDPOINTS: z.object({
     LOGIN: z.string().min(1),
@@ -17,6 +18,7 @@ export const envSchema = z.object({
     REFRESH: z.string().min(1),
     ME: z.string().min(1),
     LOGOUT: z.string().min(1),
+    UPDATE_PROFILE_NAME: z.string().min(1),
   }),
 });
 

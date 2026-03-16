@@ -95,10 +95,11 @@
   </div>
 </template>
 <script setup lang="ts">
-import type { SelectItem } from "@nuxt/ui";
-import type { SubjectsStepData, StudyStyle, UnavailableSlot } from "~/types";
+import type { ScheduleStepData, SubjectsStepData, StudyStyle, UnavailableSlot } from "~/types";
 
-const props = defineProps<{
+const isComplete = defineModel<boolean>("isComplete", { required: true });
+const data = defineModel<ScheduleStepData | null>("data", { required: true });
+defineProps<{
   subjects: SubjectsStepData["subjects"];
 }>();
 
@@ -160,4 +161,31 @@ function addUnavailableSlot() {
 function removeUnavailableSlot(idx: number) {
   unavailableSlots.value.splice(idx, 1);
 }
+
+watch(
+  () => data.value,
+  (value) => {
+    if (!value) return;
+
+    hoursPerDay.value = value.hoursPerDay;
+    breakDuration.value = value.breakDurationMinutes;
+    studyStyle.value = value.studyStyle;
+    unavailableSlots.value = [...value.unavailableSlots];
+  },
+  { immediate: true },
+);
+
+watch(
+  [hoursPerDay, breakDuration, studyStyle, unavailableSlots],
+  () => {
+    data.value = {
+      hoursPerDay: hoursPerDay.value,
+      breakDurationMinutes: breakDuration.value,
+      studyStyle: studyStyle.value,
+      unavailableSlots: unavailableSlots.value,
+    };
+    isComplete.value = true;
+  },
+  { deep: true, immediate: true },
+);
 </script>

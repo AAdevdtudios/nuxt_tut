@@ -1,4 +1,6 @@
 import {
+  createError,
+  deleteCookie,
   defineEventHandler,
   getCookie,
   readBody,
@@ -31,12 +33,29 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const refreshToken = body?.refreshToken || getCookie(event, "refresh_token");
 
-  const response = await useApi<AuthSessionResponse>(event, "/auth/refresh", {
-    method: "POST",
-    body: { refreshToken },
-    useJwt: false,
-  });
+  try {
+    const response = await useApi<AuthSessionResponse>(event, "/auth/refresh", {
+      method: "POST",
+      body: { refreshToken },
+      useJwt: false,
+    });
 
-  setAuthCookies(event, response);
-  return response;
+    setAuthCookies(event, response);
+    return response;
+  } catch (error: any) {
+    const statusCode =
+      error?.statusCode || error?.status || error?.response?.status;
+
+    if (statusCode === 401) {
+      deleteCookie(event, "access_token", { path: "/" });
+      deleteCookie(event, "refresh_token", { path: "/" });
+    }
+
+    throw createError({
+      statusCode: statusCode || 500,
+      statusMessage:
+        error?.statusMessage || error?.message || "Failed to refresh session",
+      data: error?.data,
+    });
+  }
 });

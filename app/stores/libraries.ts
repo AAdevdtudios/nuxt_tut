@@ -22,6 +22,12 @@ import type {
 } from "~/types";
 
 export const useLibraryStore = defineStore("libraries", () => {
+  const refreshVersion = useState<number>("library-refresh-version", () => 0);
+
+  const bumpRefreshVersion = () => {
+    refreshVersion.value += 1;
+  };
+
   const getApi = () => {
     const nuxtApp = useNuxtApp();
 
@@ -251,6 +257,7 @@ export const useLibraryStore = defineStore("libraries", () => {
       if (!response?.data) throw new Error("Invalid response structure");
 
       librariesById.value[response.data.id] = response.data;
+      bumpRefreshVersion();
 
       return response.data;
     } catch (err) {
@@ -285,6 +292,7 @@ export const useLibraryStore = defineStore("libraries", () => {
       if (!response?.data) throw new Error("Invalid response structure");
 
       librariesById.value[response.data.id] = response.data;
+      bumpRefreshVersion();
 
       return response.data;
     } catch (err) {
@@ -310,6 +318,7 @@ export const useLibraryStore = defineStore("libraries", () => {
 
       // Remove from store
       delete librariesById.value[id];
+      bumpRefreshVersion();
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Failed to delete library";
@@ -361,6 +370,7 @@ export const useLibraryStore = defineStore("libraries", () => {
   return {
     // State
     librariesById,
+    refreshVersion,
     pagination,
     searchQuery,
     selectedType,

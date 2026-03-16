@@ -12,7 +12,7 @@
           class="flex flex-col items-center border border-muted/50 rounded-lg p-4"
         >
           <span class="text-lg lg:text-2xl font-bold text-foreground">{{
-            materials.length
+            materialsCount
           }}</span>
           <span class="text-sm text-muted">Materials</span>
         </div>
@@ -20,7 +20,7 @@
           class="flex flex-col items-center border border-muted/50 rounded-lg p-4"
         >
           <span class="text-lg lg:text-2xl font-bold text-foreground">{{
-            notes.length
+            notesCount
           }}</span>
           <span class="text-sm text-muted">Notes</span>
         </div>
@@ -83,7 +83,26 @@
     <div class="flex flex-col border border-muted/50 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
       <div class="space-y-4">
-        <div class="flex items-center justify-between gap-4">
+        <template v-if="recentActivityItems.length">
+          <div
+            v-for="(activity, index) in recentActivityItems"
+            :key="`${activity.name}-${activity.time}-${index}`"
+            class="flex items-center justify-between gap-4"
+          >
+            <div class="flex items-center gap-4">
+              <UIcon name="i-lucide-file-text" class="h-6 w-6 text-primary" />
+              <div>
+                <p class="text-foreground">{{ activity.name }}</p>
+                <span class="text-sm text-muted">{{ activity.data }}</span>
+                <p class="text-xs text-muted mt-1">
+                  {{ formatActivityTime(activity.time) }}
+                </p>
+              </div>
+            </div>
+            <UButton icon="i-lucide-arrow-right" variant="ghost" size="sm" />
+          </div>
+        </template>
+        <div v-else class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-4">
             <UIcon name="i-lucide-file-text" class="h-6 w-6 text-primary" />
             <div>
@@ -117,15 +136,27 @@ const props = withDefaults(
     project?: ProjectOverviewData | null;
     materials?: LibraryItem[];
     notes?: LibraryItem[];
+    recentActivities?: Array<{
+      name: string;
+      data: string;
+      time: string;
+    }>;
   }>(),
   {
     project: null,
     materials: () => [],
     notes: () => [],
+    recentActivities: () => [],
   },
 );
 
 const progress = computed(() => props.project?.progress ?? 0);
+const materialsCount = computed(
+  () => props.project?.librariesCount ?? props.materials.length,
+);
+const notesCount = computed(
+  () => props.project?.notesCount ?? props.notes.length,
+);
 const dueDateLabel = computed(() => props.project?.formattedDueDate ?? "N/A");
 const statusLabel = computed(() => {
   const status = props.project?.status;
@@ -150,7 +181,7 @@ const goalDescription = computed(() => {
     return "The due date has passed. Review the project status and next actions.";
   }
 
-  return `You currently have ${props.materials.length} materials and ${props.notes.length} notes linked to this project.`;
+  return `You currently have ${materialsCount.value} materials and ${notesCount.value} notes linked to this project.`;
 });
 const activityTitle = computed(() => {
   if (props.materials.length > 0) {
@@ -170,4 +201,17 @@ const activityDescription = computed(() => {
 
   return "Add materials or notes to start building project activity.";
 });
+
+const recentActivityItems = computed(() =>
+  (props.recentActivities || []).slice(0, 4),
+);
+
+const formatActivityTime = (value: string) =>
+  new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
 </script>

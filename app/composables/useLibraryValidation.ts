@@ -25,6 +25,25 @@ export function useLibraryValidation() {
     return mimeType === "application/pdf" || fileName.endsWith(".pdf");
   };
 
+  const isBlockedUrl = (rawUrl: string): boolean => {
+    try {
+      const parsed = new URL(rawUrl);
+      const path = parsed.pathname.toLowerCase();
+      return path.endsWith(".epub");
+    } catch {
+      return false;
+    }
+  };
+
+  const isHttpUrl = (rawUrl: string): boolean => {
+    try {
+      const parsed = new URL(rawUrl);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
   /**
    * Validates library creation payload
    */
@@ -70,6 +89,18 @@ export function useLibraryValidation() {
     ) {
       try {
         new URL(payload.url);
+        if (!isHttpUrl(payload.url)) {
+          errors.value.push({
+            field: "url",
+            message: "URL must start with http:// or https://",
+          });
+        }
+        if (isBlockedUrl(payload.url)) {
+          errors.value.push({
+            field: "url",
+            message: "EPUB links are not supported. Use a website or PDF link.",
+          });
+        }
       } catch {
         errors.value.push({
           field: "url",
@@ -141,6 +172,18 @@ export function useLibraryValidation() {
     if (payload.url !== undefined && payload.url && payload.url.trim() !== "") {
       try {
         new URL(payload.url);
+        if (!isHttpUrl(payload.url)) {
+          errors.value.push({
+            field: "url",
+            message: "URL must start with http:// or https://",
+          });
+        }
+        if (isBlockedUrl(payload.url)) {
+          errors.value.push({
+            field: "url",
+            message: "EPUB links are not supported. Use a website or PDF link.",
+          });
+        }
       } catch {
         errors.value.push({
           field: "url",
@@ -197,6 +240,20 @@ export function useLibraryValidation() {
     return errors.value.some((e) => e.field === field);
   };
 
+  /**
+   * Set field errors from API response
+   */
+  const setFieldErrorsFromApi = (
+    fieldErrors: Record<string, string[]>,
+  ): void => {
+    errors.value = [];
+    Object.entries(fieldErrors).forEach(([field, messages]) => {
+      if (messages && messages.length > 0) {
+        errors.value.push({ field, message: messages[0] });
+      }
+    });
+  };
+
   return {
     errors,
     isValid,
@@ -205,5 +262,6 @@ export function useLibraryValidation() {
     clearErrors,
     getFieldError,
     hasFieldError,
+    setFieldErrorsFromApi,
   };
 }

@@ -39,14 +39,17 @@ export function useProjectRelationships(projectId: string) {
 
     return {
       ...project.value,
-      formattedDueDate: projectService.formatDateRange(
+      formattedDueDate: projectService.formatDate(project.value.end),
+      formattedDateRange: projectService.formatDateRange(
         project.value.start,
         project.value.end,
       ),
-      progress: projectService.calculateProgress(
-        project.value.start,
-        project.value.end,
-      ),
+      progress:
+        project.value.progressLevel ??
+        projectService.calculateCompletionProgress(
+          project.value.librariesCount,
+          project.value.notesCount,
+        ),
       daysRemaining: projectService.daysRemaining(project.value.end),
       isOverdue: projectService.isOverdue(project.value.end),
       colorClass: projectService.getColorClass(project.value.color),

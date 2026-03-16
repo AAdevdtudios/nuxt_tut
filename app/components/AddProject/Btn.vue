@@ -109,7 +109,25 @@ const handleSubmit = async () => {
       payload.file = formData.value.file;
     } else if (selectedType.value === "website") {
       try {
-        new URL(formData.value.url);
+        const parsed = new URL(formData.value.url);
+        if (!["http:", "https:"].includes(parsed.protocol)) {
+          toast.add({
+            title: "Validation Error",
+            description: "URL must start with http:// or https://",
+            color: "error",
+          });
+          isSubmitting.value = false;
+          return;
+        }
+        if (parsed.pathname.toLowerCase().endsWith(".epub")) {
+          toast.add({
+            title: "Validation Error",
+            description: "EPUB links are not supported. Use a website or PDF link.",
+            color: "error",
+          });
+          isSubmitting.value = false;
+          return;
+        }
         payload.url = formData.value.url.trim();
       } catch {
         toast.add({

@@ -1,9 +1,24 @@
 <script setup lang="ts">
-const items = [
-  { label: "All", value: "all" },
-  { label: "Unread", value: "unread" },
-  { label: "Starred", value: "starred" },
-];
+import { computed } from "vue";
+import { useAuthStore } from "~/stores/auth";
+import LogoutBtn from "~/components/Utils/LogoutBtn.vue";
+
+const auth = useAuthStore();
+
+const displayName = computed(() => {
+  const value = auth.currentUser?.displayName?.trim();
+  return value || "Profile";
+});
+
+const avatarText = computed(() => {
+  const name = displayName.value;
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+});
 </script>
 
 <template>
@@ -17,21 +32,15 @@ const items = [
     </template>
 
     <template #right>
-      <UButton
-        icon="i-lucide-search"
-        size="md"
-        color="primary"
-        variant="outline"
-      />
-      <UtilsNotifications />
       <UColorModeButton />
-      <ClientOnly>
-        <UAvatar
-          :src="`https://i.pravatar.cc/150?u=${Math.random()}`"
-          size="md"
-          alt="User Avatar"
-        />
-      </ClientOnly>
+      <LogoutBtn withIcon size="md" />
+      <ULink
+        to="/dashboard/settings"
+        class="flex items-center gap-3 rounded-full px-1 py-1 text-sm text-card-foreground transition-colors hover:bg-muted"
+      >
+        <UAvatar :text="avatarText" size="md" :alt="displayName" />
+        <span class="hidden font-medium md:inline">{{ displayName }}</span>
+      </ULink>
     </template>
   </UDashboardNavbar>
 </template>

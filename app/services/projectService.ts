@@ -71,30 +71,20 @@ export class ProjectService {
   }
 
   /**
-   * Calculate progress percentage based on time elapsed
-   * @param start - Start date ISO string
-   * @param end - End date ISO string
-   * @returns Progress percentage (0-100)
+   * Calculate a stable completion score based on linked project content.
+   * This should only change when the project data changes, not as time passes.
    */
-  calculateProgress(start: string, end: string): number {
-    try {
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      const now = new Date();
+  calculateCompletionProgress(
+    librariesCount: number = 0,
+    notesCount: number = 0,
+  ): number {
+    const materials = Math.max(0, librariesCount);
+    const notes = Math.max(0, notesCount);
 
-      const totalDuration = endDate.getTime() - startDate.getTime();
-      const elapsed = now.getTime() - startDate.getTime();
+    const materialsScore = Math.min(60, materials * 15);
+    const notesScore = Math.min(40, notes * 20);
 
-      if (elapsed <= 0) return 0;
-      if (elapsed >= totalDuration) return 100;
-
-      return Math.min(
-        100,
-        Math.max(0, Math.round((elapsed / totalDuration) * 100)),
-      );
-    } catch {
-      return 0;
-    }
+    return Math.min(100, materialsScore + notesScore);
   }
 
   /**

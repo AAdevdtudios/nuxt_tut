@@ -35,10 +35,10 @@ export const AI_TIMETABLE_STEPS = [
   },
   {
     id: "preferences",
-    label: "Preferences",
+    label: "Date Range",
     icon: "i-lucide-clock",
     component: markRaw(TimetableStepsPreferencesTab),
-    required: false, // ⬅️ OPTIONAL
+    required: true,
   },
 ] satisfies readonly StepDefinition[];
 
@@ -48,8 +48,8 @@ export const initialTimetableState: AITimetableWizardState = {
   deadlines: { data: null, completed: false, optional: true },
   preferences: {
     data: null,
-    completed: true, // ⬅️ ALWAYS TRUE
-    optional: true,
+    completed: false,
+    optional: false,
   },
   review: { data: null, completed: false },
 };

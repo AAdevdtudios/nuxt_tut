@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
-import { useDebounceFn } from "@vueuse/core";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  shallowRef,
+  watch,
+} from "vue";
+// import { useDebounceFn } from "@vueuse/core";
 import type { LibrarySingleResponse } from "~/types";
 
 definePageMeta({
@@ -84,7 +91,8 @@ const editorProps = {
     const { from, to } = view.state.selection;
     const currentText = view.state.doc.textContent || "";
     const selectionLength = Math.max(0, to - from);
-    const remaining = MAX_CONTENT_LENGTH - (currentText.length - selectionLength);
+    const remaining =
+      MAX_CONTENT_LENGTH - (currentText.length - selectionLength);
     const nextText = remaining > 0 ? text.slice(0, remaining) : "";
 
     if (!nextText) {
@@ -185,10 +193,13 @@ const persistNote = async () => {
           method: "POST",
           body,
         })
-      : await $api.mutate<LibrarySingleResponse>(`/api/libraries/${noteId.value}`, {
-          method: "PUT",
-          body,
-        });
+      : await $api.mutate<LibrarySingleResponse>(
+          `/api/libraries/${noteId.value}`,
+          {
+            method: "PUT",
+            body,
+          },
+        );
 
     const savedNote = response?.data;
     if (!savedNote) {
@@ -346,13 +357,10 @@ const triggerImagePicker = () => {
 const restoreSelection = (editor: any) => {
   if (!editor || !lastSelection.value) return editor?.chain?.().focus();
 
-  return editor
-    .chain()
-    .focus()
-    .setTextSelection({
-      from: lastSelection.value.from,
-      to: lastSelection.value.to,
-    });
+  return editor.chain().focus().setTextSelection({
+    from: lastSelection.value.from,
+    to: lastSelection.value.to,
+  });
 };
 
 const applyHeading = (level: 1 | 2 | 3) => {
@@ -496,7 +504,13 @@ onBeforeRouteLeave(async () => {
     <div v-else class="space-y-4">
       <div class="flex items-center justify-between gap-3">
         <UBadge
-          :color="saveState === 'error' ? 'error' : saveState === 'saved' ? 'success' : 'neutral'"
+          :color="
+            saveState === 'error'
+              ? 'error'
+              : saveState === 'saved'
+                ? 'success'
+                : 'neutral'
+          "
           variant="subtle"
         >
           {{ saveLabel }}
@@ -522,8 +536,10 @@ onBeforeRouteLeave(async () => {
         <div class="space-y-4">
           <div class="space-y-1">
             <div class="flex items-center justify-between gap-3">
-              <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Note title
+              <p
+                class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                Note title
               </p>
               <UButton
                 v-if="!isEditingTitle"
@@ -566,11 +582,14 @@ onBeforeRouteLeave(async () => {
               {{ pageTitle }}
             </button>
             <p class="px-1 text-sm text-muted-foreground">
-              Rich note editor with autosave. Type <code>/</code> in the note body for the future command menu.
+              Rich note editor with autosave. Type <code>/</code> in the note
+              body for the future command menu.
             </p>
           </div>
 
-          <div class="flex items-center justify-end px-1 text-xs text-muted-foreground">
+          <div
+            class="flex items-center justify-end px-1 text-xs text-muted-foreground"
+          >
             {{ imageCount }}/{{ MAX_NOTE_IMAGES }} images •
             {{ contentCharacterCount }}/{{ MAX_CONTENT_LENGTH }}
           </div>
@@ -585,7 +604,8 @@ onBeforeRouteLeave(async () => {
             :editor-props="editorProps"
             :ui="{
               root: 'rounded-2xl border border-default bg-default',
-              content: 'min-h-[70vh] px-6 py-5 text-base leading-7 focus:outline-none'
+              content:
+                'min-h-[70vh] px-6 py-5 text-base leading-7 focus:outline-none',
             }"
             class="w-full"
           >
@@ -595,24 +615,99 @@ onBeforeRouteLeave(async () => {
               class="sticky top-4 z-20 flex items-center justify-between gap-3 overflow-x-auto rounded-t-2xl border-b border-default bg-default/95 px-3 py-2 shadow-sm backdrop-blur"
             >
               <div class="flex items-center gap-2">
-                <UButton icon="i-lucide-undo" variant="ghost" size="sm" @click="undoChange" />
-                <UButton icon="i-lucide-redo" variant="ghost" size="sm" @click="redoChange" />
+                <UButton
+                  icon="i-lucide-undo"
+                  variant="ghost"
+                  size="sm"
+                  @click="undoChange"
+                />
+                <UButton
+                  icon="i-lucide-redo"
+                  variant="ghost"
+                  size="sm"
+                  @click="redoChange"
+                />
                 <USeparator orientation="vertical" class="h-6" />
-                <UButton label="P" variant="ghost" size="sm" @click="applyParagraph" />
-                <UButton label="H1" variant="ghost" size="sm" @click="applyHeading(1)" />
-                <UButton label="H2" variant="ghost" size="sm" @click="applyHeading(2)" />
-                <UButton label="H3" variant="ghost" size="sm" @click="applyHeading(3)" />
+                <UButton
+                  label="P"
+                  variant="ghost"
+                  size="sm"
+                  @click="applyParagraph"
+                />
+                <UButton
+                  label="H1"
+                  variant="ghost"
+                  size="sm"
+                  @click="applyHeading(1)"
+                />
+                <UButton
+                  label="H2"
+                  variant="ghost"
+                  size="sm"
+                  @click="applyHeading(2)"
+                />
+                <UButton
+                  label="H3"
+                  variant="ghost"
+                  size="sm"
+                  @click="applyHeading(3)"
+                />
                 <USeparator orientation="vertical" class="h-6" />
-                <UButton icon="i-lucide-bold" variant="ghost" size="sm" @click="toggleBold" />
-                <UButton icon="i-lucide-italic" variant="ghost" size="sm" @click="toggleItalic" />
-                <UButton icon="i-lucide-strikethrough" variant="ghost" size="sm" @click="toggleStrike" />
-                <UButton icon="i-lucide-code" variant="ghost" size="sm" @click="toggleCode" />
+                <UButton
+                  icon="i-lucide-bold"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleBold"
+                />
+                <UButton
+                  icon="i-lucide-italic"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleItalic"
+                />
+                <UButton
+                  icon="i-lucide-strikethrough"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleStrike"
+                />
+                <UButton
+                  icon="i-lucide-code"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleCode"
+                />
                 <USeparator orientation="vertical" class="h-6" />
-                <UButton icon="i-lucide-list" variant="ghost" size="sm" @click="toggleBulletList" />
-                <UButton icon="i-lucide-list-ordered" variant="ghost" size="sm" @click="toggleOrderedList" />
-                <UButton icon="i-lucide-text-quote" variant="ghost" size="sm" @click="toggleBlockquote" />
-                <UButton icon="i-lucide-square-code" variant="ghost" size="sm" @click="toggleCodeBlock" />
-                <UButton icon="i-lucide-link" variant="ghost" size="sm" @click="insertLink" />
+                <UButton
+                  icon="i-lucide-list"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleBulletList"
+                />
+                <UButton
+                  icon="i-lucide-list-ordered"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleOrderedList"
+                />
+                <UButton
+                  icon="i-lucide-text-quote"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleBlockquote"
+                />
+                <UButton
+                  icon="i-lucide-square-code"
+                  variant="ghost"
+                  size="sm"
+                  @click="toggleCodeBlock"
+                />
+                <UButton
+                  icon="i-lucide-link"
+                  variant="ghost"
+                  size="sm"
+                  @click="insertLink"
+                />
               </div>
               <UButton
                 icon="i-lucide-image-plus"

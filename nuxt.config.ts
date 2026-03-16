@@ -4,7 +4,16 @@ import path from "path";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
-  devtools: { enabled: true },
+  devtools: { enabled: false },
+  experimental: {
+    // Prevent /_nuxt/builds/meta/dev.json prefetch lookups in dev mode.
+    appManifest: false,
+    defaults: {
+      nuxtLink: {
+        prefetch: false,
+      },
+    },
+  },
   modules: [
     "@nuxt/eslint",
     "@nuxt/ui",
@@ -18,6 +27,7 @@ export default defineNuxtConfig({
     "@nuxtjs/i18n",
     "@nuxtjs/device",
     "nuxt-tiptap-editor",
+    "@vueuse/nuxt",
   ],
   tiptap: {
     prefix: "Tiptap", //prefix for Tiptap imports, composables not included

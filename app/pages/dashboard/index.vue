@@ -27,7 +27,6 @@ const projectStore = useProjectStore();
 const { $api } = useNuxtApp();
 const { allLibraries } = storeToRefs(libraryStore);
 const { allProjects } = storeToRefs(projectStore);
-const hydratedNow = useState("dashboard-now", () => Date.now());
 
 const analytics = ref<DashboardAnalytics | null>(null);
 
@@ -93,22 +92,22 @@ const formatTimestamp = (value: string) =>
     timeZone: "UTC",
   });
 
-const calculateProjectProgress = (start: string, end: string) => {
-  const startTime = new Date(start).getTime();
-  const endTime = new Date(end).getTime();
-  const now = hydratedNow.value;
-
-  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
-    return 0;
+const calculateProjectProgress = (
+  progressLevel: number | null | undefined,
+  librariesCount: number,
+  notesCount: number,
+) => {
+  if (typeof progressLevel === "number" && Number.isFinite(progressLevel)) {
+    return Math.max(0, Math.min(100, Math.round(progressLevel)));
   }
 
-  if (now <= startTime) return 0;
-  if (now >= endTime) return 100;
+  const materials = Math.max(0, librariesCount);
+  const notes = Math.max(0, notesCount);
 
-  return Math.max(
-    0,
-    Math.min(100, Math.round(((now - startTime) / (endTime - startTime)) * 100)),
-  );
+  const materialsScore = Math.min(60, materials * 15);
+  const notesScore = Math.min(40, notes * 20);
+
+  return Math.min(100, materialsScore + notesScore);
 };
 </script>
 
@@ -252,9 +251,23 @@ const calculateProjectProgress = (start: string, end: string) => {
             </div>
 
             <div class="mt-8">
-              <UProgress :model-value="calculateProjectProgress(project.start, project.end)" />
+              <UProgress
+                :model-value="
+                  calculateProjectProgress(
+                    project.progressLevel,
+                    project.librariesCount,
+                    project.notesCount,
+                  )
+                "
+              />
               <p class="mt-1 text-sm text-muted-foreground">
-                {{ calculateProjectProgress(project.start, project.end) }}% Complete
+                {{
+                  calculateProjectProgress(
+                    project.progressLevel,
+                    project.librariesCount,
+                    project.notesCount,
+                  )
+                }}% Complete
               </p>
             </div>
           </UCard>

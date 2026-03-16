@@ -18,6 +18,117 @@ type ApiMutationOptions<T, R> = {
 export default defineNuxtPlugin(() => {
   const nuxtApp = useNuxtApp();
 
+  const stripEndpointNoise = (message: string) =>
+    message
+      .replace(/^\[[A-Z]+\]\s+"[^"]+":\s*\d+\s*/i, "")
+      .replace(/^One or more errors occurred![:\s]*/i, "")
+      .trim();
+
+  const flattenErrorDetails = (errors: any): string[] => {
+    if (!errors || typeof errors !== "object") return [];
+
+    return Object.entries(errors).flatMap(([key, value]) => {
+      if (Array.isArray(value)) {
+        return value.map((entry) =>
+          stripEndpointNoise(`${key}: ${String(entry || "")}`),
+        );
+      }
+      if (typeof value === "string") {
+        return [stripEndpointNoise(`${key}: ${value}`)];
+      }
+      return [];
+    });
+  };
+
+  const normalizeErrorMessage = (error: any) => {
+    const fallback = "Request failed. Please try again.";
+    const data = error?.data || error?.response?._data;
+    const code = String(data?.code || "").toLowerCase();
+    const errorLabel = String(data?.error || "").toLowerCase();
+    const statusCode = Number(
+      error?.response?.status || error?.statusCode || error?.status || data?.statusCode || 0,
+    );
+    const messages: string[] = [];
+
+    if (statusCode === 401 || code === "unauthorized" || errorLabel === "unauthorized") {
+      return "Unauthorized. Please log in again.";
+    }
+
+    if (statusCode === 403 || code === "forbidden" || errorLabel === "forbidden") {
+      const explicit =
+        typeof data?.error === "string"
+          ? data.error
+          : typeof data?.message === "string"
+            ? data.message
+            : "";
+      return stripEndpointNoise(explicit) || "You do not have permission for this action.";
+    }
+
+    if (statusCode === 404 || code === "notfound") {
+      const explicit =
+        typeof data?.error === "string"
+          ? data.error
+          : typeof data?.message === "string"
+            ? data.message
+            : "";
+      return stripEndpointNoise(explicit) || "The requested resource was not found.";
+    }
+
+    if (typeof data?.message === "string") {
+      messages.push(stripEndpointNoise(data.message));
+    }
+
+    messages.push(...flattenErrorDetails(data?.errors));
+
+    if (typeof error?.statusMessage === "string") {
+      messages.push(stripEndpointNoise(error.statusMessage));
+    }
+
+    if (typeof error?.message === "string") {
+      messages.push(stripEndpointNoise(error.message));
+    }
+
+    const merged = messages.filter(Boolean).join(" ").trim() || fallback;
+    const lowered = merged.toLowerCase();
+
+    if (
+      lowered.includes("limit") ||
+      lowered.includes("quota") ||
+      lowered.includes("exceed")
+    ) {
+      if (
+        lowered.includes("document") ||
+        lowered.includes("file") ||
+        lowered.includes("upload")
+      ) {
+        return "Document limit exceeded for your current plan.";
+      }
+
+      if (
+        lowered.includes("question") ||
+        lowered.includes("practice") ||
+        lowered.includes("essay")
+      ) {
+        return "Question limit exceeded for your current plan.";
+      }
+
+      return "Your current plan limit has been exceeded.";
+    }
+
+    return merged;
+  };
+
+  const withNormalizedMessage = (error: any) => {
+    const message = normalizeErrorMessage(error);
+    const normalized = new Error(message) as any;
+    normalized.cause = error;
+    normalized.data = error?.data || error?.response?._data;
+    normalized.status = error?.status || error?.response?.status;
+    normalized.statusCode = error?.statusCode || error?.response?.status;
+    normalized.statusMessage = message;
+    return normalized;
+  };
+
   const shouldBypassAuthRefresh = (url: string) =>
     url === "/api/auth/login" ||
     url === "/api/auth/register" ||
@@ -55,7 +166,7 @@ export default defineNuxtPlugin(() => {
   const redirectToLogin = async () => {
     const auth = useAuthStore();
     auth.clearSession();
-    await nuxtApp.runWithContext(() => navigateTo("/auth/login"));
+    await nuxtApp.runWithContext(() => navigateTo("/"));
   };
 
   const request = async <T, R = T>(
@@ -65,17 +176,28 @@ export default defineNuxtPlugin(() => {
   ): Promise<R> => {
     try {
       const auth = useAuthStore();
+      const hasBody = options.body !== undefined && options.body !== null;
 
       if (!shouldBypassAuthRefresh(url)) {
         await auth.ensureValidAccessToken();
       }
 
-      const result = (await $fetch(url, {
+      const fetchOptions: {
+        method: ApiMethod;
+        query?: Record<string, any>;
+        headers: HeadersInit;
+        body?: any;
+      } = {
         method: options.method || "GET",
-        body: options.body,
         query: options.query,
         headers: withAuthHeaders(options.headers),
-      })) as T;
+      };
+
+      if (hasBody) {
+        fetchOptions.body = options.body;
+      }
+
+      const result = (await $fetch(url, fetchOptions)) as T;
 
       return options.transform ? options.transform(result) : (result as unknown as R);
     } catch (error: any) {
@@ -97,11 +219,13 @@ export default defineNuxtPlugin(() => {
         await redirectToLogin();
       }
 
+      const normalizedError = withNormalizedMessage(error);
+
       if (options.onError) {
-        throw options.onError(error);
+        throw options.onError(normalizedError);
       }
 
-      throw error;
+      throw normalizedError;
     }
   };
 

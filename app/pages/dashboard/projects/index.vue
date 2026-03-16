@@ -223,8 +223,17 @@ const handleCreateProject = async (projectData: any) => {
 
     isCreating.value = false;
     notify("Project created successfully", "success");
-  } catch {
-    notify("Failed to create project", "error");
+  } catch (error: any) {
+    // Extract field errors from API response
+    const fieldErrors = error?.data?.fieldErrors;
+    if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+      // Set field errors on form for display below each field
+      form.setFieldErrorsFromApi(fieldErrors);
+      notify("Please check the highlighted fields", "error");
+    } else {
+      // Fallback to generic error message
+      notify(error?.data?.statusMessage || "Failed to create project", "error");
+    }
   }
 };
 
@@ -250,7 +259,12 @@ const formatProjectForDisplay = (project: any) => {
       project.start,
       project.end,
     ),
-    progress: projectService.calculateProgress(project.start, project.end),
+    progress:
+      project.progressLevel ??
+      projectService.calculateCompletionProgress(
+        project.librariesCount,
+        project.notesCount,
+      ),
     daysRemaining: projectService.daysRemaining(project.end),
     isOverdue: projectService.isOverdue(project.end),
     colorClass: projectService.getColorClass(project.color),

@@ -1,2 +1,8 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* Prevent stale closed overlays from intercepting clicks after tab restore. */
+[data-state="closed"].fixed.inset-0,
+[data-state="closed"][class*="fixed"][class*="inset-0"] {
+  pointer-events: none !important;
+}

@@ -1,5 +1,5 @@
 <template>
-  <UDrawer title="Select Content">
+  <UDrawer title="Select Content" description="Choose one library item">
     <template #content>
       <div class="max-h-[60vh] overflow-y-auto">
         <button
@@ -69,11 +69,9 @@ const isSelected = (item: LibrarySelection) => {
 const toggleContentSelection = (item: LibrarySelection) => {
   let updatedSelection: LibrarySelection[];
   if (isSelected(item)) {
-    updatedSelection = localSelected.value.filter(
-      (selected) => selected.id !== item.id
-    );
+    updatedSelection = [];
   } else {
-    updatedSelection = [...localSelected.value, item];
+    updatedSelection = [item];
   }
   // Update local state immediately for reactive UI
   localSelected.value = updatedSelection;

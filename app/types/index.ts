@@ -38,3 +38,35 @@ export type {
   LibrariesResponse as LibraryListResponse,
   LibraryType,
 } from "./library.types";
+
+// Feedback types
+export type {
+  FeedbackCategory,
+  FeedbackStatus,
+  FeedbackSortBy,
+  FeedbackItem,
+  FeedbackListResponse,
+  FeedbackOption,
+  FeedbackCategoryMeta,
+  FeedbackStatusMeta,
+} from "./feedback.types";
+
+// Support types
+export type {
+  SupportTab,
+  SupportArticle,
+  SupportResponse,
+  GuideItem,
+} from "./support.types";
+
+// Timetable types
+export type {
+  TimetableRequestSubject,
+  TimetableRequestUnavailableSlot,
+  TimetableRequestDeadline,
+  TimetableGenerateRequest,
+  TimetableBlock,
+  TimetableDaySchedule,
+  TimetableValidation,
+  TimetableGenerateResponse,
+} from "./timetable.types";

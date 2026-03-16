@@ -1,153 +1,102 @@
 <template>
   <div class="max-w-2xl space-y-6">
-    <!-- Project Settings Card -->
     <UCard>
       <template #header>
         <h3 class="text-lg font-semibold">Project Settings</h3>
       </template>
 
       <div class="space-y-6">
-        <!-- Project Name -->
-        <div>
-          <UFormField label="Project Name">
-            <UInput
-              v-model="settingsForm.name"
-              placeholder="Enter project name"
-              variant="soft"
-              size="xl"
-              class="w-full mt-2"
-            />
-          </UFormField>
-        </div>
-
-        <!-- Description -->
-        <div>
-          <UFormField label="Description">
-            <UTextarea
-              v-model="settingsForm.description"
-              placeholder="Enter project description"
-              :rows="3"
-              variant="soft"
-              size="xl"
-              class="w-full mt-2"
-            />
-          </UFormField>
-        </div>
-
-        <!-- Icon Selector -->
-        <div>
-          <UFormField label="Icon">
-            <div class="flex flex-wrap gap-2">
-              <UButton
-                v-for="option in iconOptions"
-                :key="option.id"
-                @click="settingsForm.icon = option.id"
-                :active="settingsForm.icon === option.id"
-                :icon="option.icon"
-                :active-class="
-                  settingsForm.icon === option.id ? 'border-primary' : ''
-                "
-                :variant="settingsForm.icon === option.id ? 'solid' : 'ghost'"
-                class="flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all"
-              />
-            </div>
-          </UFormField>
-        </div>
-
-        <!-- Color Selector -->
-        <div>
-          <UFormField label="Color">
-            <div class="flex flex-wrap gap-2">
-              <UButton
-                v-for="color in colorOptions"
-                :key="color"
-                @click="settingsForm.color = color"
-                :active="settingsForm.color === color"
-                :active-class="
-                  settingsForm.color === color
-                    ? 'ring-2 ring-foreground ring-offset-2'
-                    : ''
-                "
-                :style="{ backgroundColor: color }"
-                class="h-8 w-8 rounded-lg transition-all"
-              />
-            </div>
-          </UFormField>
-        </div>
-
-        <!-- Goal -->
-        <div>
-          <UFormField label="Goal">
-            <UInput
-              v-model="settingsForm.goal"
-              placeholder="What do you want to achieve?"
-              class="w-full mt-2"
-              size="xl"
-              variant="soft"
-            />
-          </UFormField>
-        </div>
-
-        <!-- Study Hours Per Week -->
-        <div>
-          <label class="block text-sm font-medium mb-3"
-            >Study Hours Per Week: {{ settingsForm.studyHoursPerWeek }}h</label
-          >
-          <input
-            v-model.number="settingsForm.studyHoursPerWeek"
-            type="range"
-            min="1"
-            max="40"
-            class="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+        <UFormField label="Project Name">
+          <UInput
+            v-model="form.title"
+            placeholder="Enter project name"
+            variant="soft"
+            size="xl"
+            class="mt-2 w-full"
           />
-          <div class="flex justify-between text-xs text-muted-foreground mt-2">
-            <span>1h</span>
-            <span>40h</span>
+        </UFormField>
+
+        <UFormField label="Description">
+          <UTextarea
+            v-model="form.description"
+            placeholder="Enter project description"
+            :rows="3"
+            variant="soft"
+            size="xl"
+            class="mt-2 w-full"
+          />
+        </UFormField>
+
+        <div>
+          <UFormField label="Icon" />
+          <div class="mt-2 flex flex-wrap gap-2">
+            <UButton
+              v-for="option in iconOptions"
+              :key="option.id"
+              :icon="option.icon"
+              :variant="form.icons === option.id ? 'solid' : 'ghost'"
+              class="flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all"
+              :class="form.icons === option.id ? 'border-primary' : 'border-default'"
+              @click="form.icons = option.id"
+            />
           </div>
         </div>
 
-        <!-- Tags -->
         <div>
-          <UFormField label="Tags (comma separated)">
+          <UFormField label="Color" />
+          <ColorPresets v-model="form.color" :show-label="false" />
+        </div>
+
+        <div class="grid gap-3 md:grid-cols-2">
+          <UFormField label="Start Date">
             <UInput
-              v-model="settingsForm.tags"
-              placeholder="e.g., Physics, Quantum Mechanics, Science"
-              class="w-full mt-2"
-              size="xl"
+              v-model="form.startDate"
+              type="date"
               variant="soft"
+              class="mt-2 w-full"
+            />
+          </UFormField>
+          <UFormField label="End Date">
+            <UInput
+              v-model="form.endDate"
+              type="date"
+              variant="soft"
+              class="mt-2 w-full"
             />
           </UFormField>
         </div>
 
-        <!-- Save Button -->
-        <UButton
-          @click="handleSaveSettings"
-          icon="i-lucide-save"
-          size="lg"
-          class="w-full md:w-auto"
-        >
-          Save Changes
-        </UButton>
+        <div class="flex items-center gap-2">
+          <UButton
+            :loading="isSaving"
+            :disabled="!hasChanges"
+            icon="i-lucide-save"
+            size="lg"
+            @click="handleSaveSettings"
+          >
+            Save Changes
+          </UButton>
+          <UButton
+            variant="ghost"
+            :disabled="!hasChanges || isSaving"
+            @click="resetForm"
+          >
+            Reset
+          </UButton>
+        </div>
       </div>
     </UCard>
 
-    <!-- Danger Zone -->
     <UCard class="border-red-200/50 bg-red-50/50 dark:bg-red-950/20">
       <template #header>
         <h3 class="text-lg font-semibold text-red-600">Danger Zone</h3>
       </template>
-
       <div class="space-y-4">
         <p class="text-sm text-muted-foreground">
-          Once you delete a project, there is no going back. Please be certain.
+          Once you delete a project, there is no going back.
         </p>
-        <UModal>
-          <UButton
-            size="xl"
-            variant="outline"
-            color="error"
-            label="Delete Project"
-          />
+        <UModal v-model:open="showDeleteConfirm">
+          <UButton size="xl" variant="outline" color="error" label="Delete Project" />
           <template #content>
             <UCard class="p-6 text-center">
               <div
@@ -157,96 +106,225 @@
               </div>
               <h3 class="mt-4 text-lg font-semibold">Delete Project?</h3>
               <p class="mt-2 text-sm text-muted-foreground">
-                This will permanently delete "{{ projectName }}" and all its
-                contents. This action cannot be undone.
+                This will permanently delete "{{ form.title || projectName }}".
               </p>
-
               <div class="mt-6 flex gap-3">
-                <UButton
-                  class="flex-1"
-                  variant="soft"
-                  @click="showDeleteConfirm = false"
-                  >Cancel</UButton
-                >
-                <UButton
-                  class="flex-1"
-                  color="error"
-                  @click="handleDeleteProject"
-                  >Delete</UButton
-                >
+                <UButton class="flex-1" variant="soft" @click="showDeleteConfirm = false">
+                  Cancel
+                </UButton>
+                <UButton class="flex-1" color="error" :loading="isDeleting" @click="handleDeleteProject">
+                  Delete
+                </UButton>
               </div>
             </UCard>
           </template>
         </UModal>
       </div>
     </UCard>
-
-    <!-- Delete Confirmation Modal -->
   </div>
 </template>
 
 <script setup lang="ts">
-const toast = useToast();
+import type { ProjectIcon, ProjectUpdateRequest } from "~/types/project.types";
+import type { NormalizedProject } from "~/stores/projects";
+import { ICONS } from "~/constants/projects.const";
+import ColorPresets from "~/components/ColorPresets.vue";
+import { useProjectStore } from "~/stores/projects";
 
-// Props
-defineProps<{
+type ProjectPreview = Partial<{
+  title: string;
+  description: string | null;
+  icons: ProjectIcon;
+  color: string;
+  start: string;
+  end: string;
+}>;
+
+const props = defineProps<{
+  projectId: string;
   projectName?: string;
+  project?: NormalizedProject | null;
 }>();
 
-// Icon options
-const iconOptions = [
-  { id: "graduation-cap", icon: "i-lucide-graduation-cap" },
-  { id: "file-text", icon: "i-lucide-file-text" },
-  { id: "atom", icon: "i-lucide-atom" },
-  { id: "presentation", icon: "i-lucide-presentation" },
-  { id: "book-open", icon: "i-lucide-book-open" },
-  { id: "folder", icon: "i-lucide-folder-kanban" },
-  { id: "target", icon: "i-lucide-target" },
-  { id: "sparkles", icon: "i-lucide-sparkles" },
-];
+const emit = defineEmits<{
+  (e: "project-preview-changed", value: ProjectPreview): void;
+}>();
 
-// Color options
-const colorOptions = [
-  "#a855f7",
-  "#3b82f6",
-  "#10b981",
-  "#f97316",
-  "#ec4899",
-  "#06b6d4",
-  "#ef4444",
-  "#6366f1",
-];
+const toast = useToast();
+const router = useRouter();
+const projectStore = useProjectStore();
 
-// State
 const showDeleteConfirm = ref(false);
+const isSaving = ref(false);
+const isDeleting = ref(false);
 
-const settingsForm = reactive({
-  name: "Advanced Physics",
-  description:
-    "Comprehensive study materials for quantum mechanics and relativity",
-  icon: "graduation-cap",
-  color: "#a855f7",
-  goal: "Master quantum mechanics principles and pass the final exam with 85%+",
-  studyHoursPerWeek: 15,
-  tags: "Physics, Quantum Mechanics, Science",
+const iconOptions = Object.entries(ICONS).map(([id, icon]) => ({
+  id: id as ProjectIcon,
+  icon,
+}));
+
+const form = reactive({
+  title: "",
+  description: "",
+  icons: "folder" as ProjectIcon,
+  color: "a78bfa",
+  startDate: "",
+  endDate: "",
 });
 
-const handleSaveSettings = () => {
-  toast.add({
-    title: "Success",
-    description: "Project settings saved successfully",
-    color: "error",
-  });
-  // Handle actual save logic here
-};
+const initial = reactive({
+  title: "",
+  description: "",
+  icons: "folder" as ProjectIcon,
+  color: "a78bfa",
+  startDate: "",
+  endDate: "",
+});
 
-const handleDeleteProject = () => {
-  toast.add({
-    title: "Project Deleted",
-    description: "The project has been permanently deleted",
-    color: "error",
-  });
-  showDeleteConfirm.value = false;
-  // Navigate away or handle deletion
-};
+function toDateInput(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function syncFromProject(project?: NormalizedProject | null) {
+  const title = project?.title || "";
+  const description = project?.description || "";
+  const icons = (project?.icons || "folder") as ProjectIcon;
+  const color = (project?.color || "a78bfa").replace(/^#/, "");
+  const startDate = toDateInput(project?.start);
+  const endDate = toDateInput(project?.end);
+
+  form.title = title;
+  form.description = description;
+  form.icons = icons;
+  form.color = color;
+  form.startDate = startDate;
+  form.endDate = endDate;
+
+  initial.title = title;
+  initial.description = description;
+  initial.icons = icons;
+  initial.color = color;
+  initial.startDate = startDate;
+  initial.endDate = endDate;
+}
+
+watch(
+  () => props.project,
+  (project) => {
+    syncFromProject(project);
+  },
+  { immediate: true },
+);
+
+const hasChanges = computed(() => {
+  return (
+    form.title !== initial.title ||
+    form.description !== initial.description ||
+    form.icons !== initial.icons ||
+    form.color !== initial.color ||
+    form.startDate !== initial.startDate ||
+    form.endDate !== initial.endDate
+  );
+});
+
+const previewPayload = computed<ProjectPreview>(() => ({
+  title: form.title || "Project",
+  description: form.description || null,
+  icons: form.icons,
+  color: form.color,
+  start: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+  end: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+}));
+
+watch(
+  previewPayload,
+  (value) => {
+    emit("project-preview-changed", value);
+  },
+  { deep: true },
+);
+
+function resetForm() {
+  form.title = initial.title;
+  form.description = initial.description;
+  form.icons = initial.icons;
+  form.color = initial.color;
+  form.startDate = initial.startDate;
+  form.endDate = initial.endDate;
+}
+
+function buildPatchPayload(): ProjectUpdateRequest {
+  const payload: ProjectUpdateRequest = {};
+
+  if (form.title !== initial.title) payload.title = form.title.trim();
+  if (form.description !== initial.description) {
+    payload.description = form.description.trim();
+  }
+  if (form.icons !== initial.icons) payload.icons = form.icons;
+  if (form.color !== initial.color) payload.color = form.color.replace(/^#/, "");
+  if (form.startDate !== initial.startDate && form.startDate) payload.start = form.startDate;
+  if (form.endDate !== initial.endDate && form.endDate) payload.end = form.endDate;
+
+  return payload;
+}
+
+async function handleSaveSettings() {
+  if (!hasChanges.value || !props.projectId) return;
+  if (form.endDate && form.startDate && form.endDate < form.startDate) {
+    toast.add({
+      title: "Invalid dates",
+      description: "End date must be on or after start date.",
+      color: "error",
+    });
+    return;
+  }
+
+  const payload = buildPatchPayload();
+  if (Object.keys(payload).length === 0) return;
+
+  try {
+    isSaving.value = true;
+    await projectStore.updateProject(props.projectId, payload);
+    syncFromProject(projectStore.getProjectById(props.projectId));
+    toast.add({
+      title: "Saved",
+      description: "Project settings updated.",
+      color: "success",
+    });
+  } catch (error: any) {
+    toast.add({
+      title: "Update failed",
+      description: error?.message || "Could not update project settings.",
+      color: "error",
+    });
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+async function handleDeleteProject() {
+  if (!props.projectId) return;
+  try {
+    isDeleting.value = true;
+    await projectStore.deleteProject(props.projectId);
+    showDeleteConfirm.value = false;
+    toast.add({
+      title: "Project deleted",
+      description: "The project has been permanently deleted.",
+      color: "success",
+    });
+    await router.push("/dashboard/projects");
+  } catch (error: any) {
+    toast.add({
+      title: "Delete failed",
+      description: error?.message || "Could not delete project.",
+      color: "error",
+    });
+  } finally {
+    isDeleting.value = false;
+  }
+}
 </script>

@@ -134,6 +134,20 @@ export function useProjectForm(): UseProjectFormReturn {
     return errors.value.find((err) => err.field === field)?.message;
   };
 
+  /**
+   * Set field errors from API response
+   */
+  const setFieldErrorsFromApi = (
+    fieldErrors: Record<string, string[]>,
+  ): void => {
+    errors.value = [];
+    Object.entries(fieldErrors).forEach(([field, messages]) => {
+      if (messages && messages.length > 0) {
+        errors.value.push({ field, message: messages[0] });
+      }
+    });
+  };
+
   return {
     formData,
     errors,
@@ -142,5 +156,6 @@ export function useProjectForm(): UseProjectFormReturn {
     resetForm,
     hasFieldError,
     getFieldError,
+    setFieldErrorsFromApi,
   };
 }

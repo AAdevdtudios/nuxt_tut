@@ -11,6 +11,8 @@ const rawEnv = {
     REFRESH: process.env.API_REFRESH_ENDPOINT || "/api/auth/refresh",
     ME: process.env.API_ME_ENDPOINT || "/api/auth/me",
     LOGOUT: process.env.API_LOGOUT_ENDPOINT || "/api/auth/logout",
+    UPDATE_PROFILE_NAME:
+      process.env.API_UPDATE_PROFILE_NAME_ENDPOINT || "/api/auth/profile/name",
   },
   SERVER_API_ENDPOINTS: {
     LOGIN: "/api/auth/login",
@@ -18,6 +20,7 @@ const rawEnv = {
     REFRESH: "/api/auth/refresh",
     ME: "/api/auth/me",
     LOGOUT: "/api/auth/logout",
+    UPDATE_PROFILE_NAME: "/api/auth/profile/name",
   },
 };
 

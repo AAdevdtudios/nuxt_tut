@@ -86,12 +86,29 @@ export function normalizeProjectItem(input: unknown): ProjectItem {
         ? item.items
         : [];
   const normalizedLibraries = libraries.map(normalizeProjectLibrary);
+  const apiLibraryIds = Array.isArray(item.libraryIds)
+    ? item.libraryIds.map((id: unknown) => String(id)).filter(Boolean)
+    : [];
+  const derivedLibraryIds = normalizedLibraries
+    .map((library) => String(library.id || library.documentId || ""))
+    .filter(Boolean);
+  const libraryIds = Array.from(new Set([...apiLibraryIds, ...derivedLibraryIds]));
   const noteLibraries = normalizedLibraries.filter(
     (library) => library.libraryType === "note",
   );
   const nonNoteLibraries = normalizedLibraries.filter(
     (library) => library.libraryType !== "note",
   );
+  const rawProgressLevel =
+    item.progressLevel ??
+    item.progress?.progressLevel ??
+    item.progress?.level ??
+    item.progress ??
+    null;
+  const progressLevel =
+    rawProgressLevel === null || rawProgressLevel === undefined
+      ? null
+      : Number(rawProgressLevel);
 
   return {
     id,
@@ -105,6 +122,7 @@ export function normalizeProjectItem(input: unknown): ProjectItem {
     createdAt: item.createdAt ?? item.createdAtUtc ?? new Date().toISOString(),
     updatedAt: item.updatedAt ?? item.updatedAtUtc ?? new Date().toISOString(),
     publishedAt: item.publishedAt ?? null,
+    libraryIds,
     libraries: nonNoteLibraries,
     librariesCount: Number(
       item.librariesCount ??
@@ -115,6 +133,7 @@ export function normalizeProjectItem(input: unknown): ProjectItem {
     notesCount: Number(
       item.notesCount ?? item.noteCount ?? item.totalNotes ?? noteLibraries.length,
     ),
+    progressLevel: Number.isFinite(progressLevel) ? progressLevel : null,
   };
 }
 
@@ -158,4 +177,3 @@ export function normalizeProjectSingleResponse(input: unknown): ProjectSingleRes
     data: normalizeProjectItem(item),
   };
 }
-
