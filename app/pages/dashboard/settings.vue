@@ -30,7 +30,11 @@
               <UInput :model-value="settings.email" disabled class="w-full" />
             </UFormField>
             <UFormField label="Username">
-              <UInput :model-value="settings.username" disabled class="w-full" />
+              <UInput
+                :model-value="settings.username"
+                disabled
+                class="w-full"
+              />
             </UFormField>
           </div>
         </div>
@@ -44,7 +48,12 @@
             >
               {{ saved ? "Saved!" : "Save Changes" }}
             </UButton>
-            <UButton variant="ghost" color="error" label="Delete Account" disabled />
+            <UButton
+              variant="ghost"
+              color="error"
+              label="Delete Account"
+              disabled
+            />
           </div>
         </template>
       </UCard>
@@ -101,12 +110,8 @@
         </div>
         <template #footer>
           <div class="flex flex-wrap justify-end gap-2">
-            <UButton variant="ghost" disabled>
-              View Payment History
-            </UButton>
-            <UButton variant="solid" disabled>
-              Manage Payment Methods
-            </UButton>
+            <UButton variant="ghost" disabled> View Payment History </UButton>
+            <UButton variant="solid" disabled> Manage Payment Methods </UButton>
           </div>
         </template>
       </UCard>
@@ -115,6 +120,7 @@
         :ui="{
           header: 'border-b border-default',
         }"
+        class="col-span-1 lg:col-span-2"
       >
         <template #header>
           <div class="flex items-center gap-3">
@@ -174,18 +180,13 @@
                   Minimize non-essential animations in the dashboard.
                 </p>
               </div>
-              <USwitch
-                v-model="systemDraft.reducedMotion"
-              />
+              <USwitch v-model="systemDraft.reducedMotion" />
             </div>
           </div>
         </div>
 
         <template #footer>
           <div class="flex items-center justify-between gap-2">
-            <p class="text-xs text-muted-foreground">
-              Saved locally on this device (no server sync).
-            </p>
             <UButton
               color="primary"
               :disabled="!canSaveSystemPreferences"
@@ -196,14 +197,16 @@
           </div>
         </template>
       </UCard>
+      <PricingPlansCard class="col-span-1 lg:col-span-2" :plans="plans" />
     </div>
   </DashboardBodyLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useSystemPreferencesStore } from "~/stores/systemPreferences";
+import { useSubscriptionPlans } from "~/composables/useSubscriptionPlans";
 
 definePageMeta({
   layout: "dashboard",
@@ -213,6 +216,13 @@ const auth = useAuthStore();
 const systemPreferences = useSystemPreferencesStore();
 const colorMode = useColorMode();
 const toast = useToast();
+
+// Fetch subscription plans
+const { plans, fetchPlans, isLoading: plansLoading } = useSubscriptionPlans();
+
+onMounted(async () => {
+  await fetchPlans();
+});
 const saved = ref(false);
 const systemSaved = ref(false);
 const saving = ref(false);
@@ -259,7 +269,9 @@ if (
 const canSave = computed(() => {
   const nextName = settings.value.name.trim();
   const currentName =
-    auth.currentUser?.name?.trim() || auth.currentUser?.displayName?.trim() || "";
+    auth.currentUser?.name?.trim() ||
+    auth.currentUser?.displayName?.trim() ||
+    "";
   return nextName.length >= 3 && nextName !== currentName;
 });
 
