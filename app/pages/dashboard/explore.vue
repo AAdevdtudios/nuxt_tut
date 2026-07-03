@@ -47,7 +47,7 @@ import CategoryFilter from "~/components/Explore/CategoryFilter.vue";
 import ExploreMaterialsSection from "~/components/Explore/MaterialsSection.vue";
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
 });
 
 const toast = useToast();

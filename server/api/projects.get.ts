@@ -3,6 +3,7 @@ import { useApi } from "../utils/api";
 import { parseProjectsQuery } from "../schemas/project.schema";
 import type { ProjectsResponse } from "~/types/project.types";
 import { normalizeProjectsResponse } from "../utils/project";
+import { formatValidationError } from "../utils/validation";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -29,12 +30,7 @@ export default defineEventHandler(async (event) => {
     return normalizeProjectsResponse(response) as ProjectsResponse;
   } catch (error: any) {
     if (error instanceof Error && error.name === "ZodError") {
-      const zodError = error as any;
-      const fieldErrors = (zodError.errors || [])
-        .map(
-          (err: any) => `${err.path?.join(".") || "unknown"} - ${err.message}`,
-        )
-        .join(", ");
+      const fieldErrors = formatValidationError(error);
       throw createError({
         statusCode: 400,
         statusMessage: `Validation failed: ${fieldErrors}`,

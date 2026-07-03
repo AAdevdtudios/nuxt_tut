@@ -12,7 +12,8 @@ const { initialize } = useStoreInitializer();
 const projectService = new ProjectService();
 
 const displayName = computed(() => {
-  const value = auth.currentUser?.displayName?.trim();
+  const value =
+    auth.currentUser?.name?.trim() || auth.currentUser?.displayName?.trim();
   return value || "Profile";
 });
 
@@ -36,14 +37,14 @@ const projectMenuChildren = computed<NavigationMenuItem[]>(() =>
 
 const primaryItems = computed<NavigationMenuItem[]>(() => [
   {
-    label: "Dashboard",
-    icon: "i-lucide-layout-dashboard",
+    label: "Home",
+    icon: "i-lucide-house",
     to: "/dashboard",
   },
   {
-    label: "Library",
-    icon: "i-lucide-library-big",
-    to: "/dashboard/library",
+    label: "Notes",
+    icon: "i-lucide-notebook-pen",
+    to: "/dashboard/notes",
   },
   {
     label: "Projects",
@@ -53,32 +54,17 @@ const primaryItems = computed<NavigationMenuItem[]>(() => [
     children: projectMenuChildren.value,
   },
   {
-    label: "Timetable",
-    icon: "i-lucide-calendar",
-    to: "/dashboard/timetable",
-  },
-  {
-    label: "Explore",
-    icon: "i-lucide-telescope",
-    to: "/dashboard/explore",
-  },
-  {
-    label: "Settings",
-    icon: "i-lucide-settings",
-    to: "/dashboard/settings",
+    label: "Library",
+    icon: "i-lucide-library-big",
+    to: "/dashboard/library",
   },
 ]);
 
 const secondaryItems: NavigationMenuItem[] = [
   {
-    label: "Feedback",
-    icon: "i-lucide-message-circle",
-    to: "/dashboard/feedback",
-  },
-  {
-    label: "Coming Soon",
-    icon: "i-lucide-rocket",
-    to: "/dashboard/coming-soon",
+    label: "Settings",
+    icon: "i-lucide-settings",
+    to: "/dashboard/settings",
   },
   {
     label: "Help & Support",
@@ -118,7 +104,7 @@ onMounted(async () => {
           <span class="text-sm font-bold text-primary-foreground">AI</span>
         </div>
         <span class="text-lg font-semibold text-sidebar-foreground"
-          >LearnHub</span
+          >GapAI</span
         >
       </div>
     </template>

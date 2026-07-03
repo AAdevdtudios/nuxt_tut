@@ -3,7 +3,7 @@
     <!-- Add subject -->
     <div>
       <label class="font-medium text-md">Subjects</label>
-      <p class="text-sm text-gray-600">
+      <p class="ga-muted text-sm">
         Please enter your subjects for the timetable:
       </p>
 
@@ -27,7 +27,7 @@
     <!-- Selected subjects -->
     <div v-if="subjects.length">
       <label class="font-medium text-md">Your Subjects</label>
-      <p class="text-sm text-gray-600">Selected subjects for your timetable:</p>
+      <p class="ga-muted text-sm">Selected subjects for your timetable:</p>
 
       <div class="mt-2 flex flex-wrap gap-2">
         <div
@@ -47,7 +47,7 @@
     <!-- Priority selection -->
     <div v-if="subjects.length">
       <label class="font-medium text-md">Priority Subjects</label>
-      <p class="text-sm text-gray-600">
+      <p class="ga-muted text-sm">
         Select subjects that need extra focus:
       </p>
 

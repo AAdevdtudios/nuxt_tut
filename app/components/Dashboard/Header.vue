@@ -5,9 +5,9 @@
     <div>
       <div class="flex items-center gap-3">
         <slot name="leading-icon" />
-        <h2 class="text-3xl font-bold text-foreground">{{ title }}</h2>
+        <h2 class="ga-heading text-3xl font-bold">{{ title }}</h2>
       </div>
-      <p class="mt-1 text-muted-foreground">
+      <p class="ga-muted mt-1">
         {{ description ?? "" }}
       </p>
     </div>

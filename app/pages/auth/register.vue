@@ -2,6 +2,10 @@
 import * as z from "zod";
 import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
 import { useAuthStore } from "~/stores/auth";
+import {
+  extractApiFieldErrors,
+  formatFieldErrors,
+} from "~/utils/validation-errors";
 
 // setup layout
 definePageMeta({
@@ -11,11 +15,19 @@ const toast = useToast();
 
 const fields: AuthFormField[] = [
   {
-    name: "displayName",
+    name: "name",
     type: "text",
     autocomplete: "name",
-    label: "Display Name",
-    placeholder: "Enter your name",
+    label: "Full Name",
+    placeholder: "Enter your full name",
+    required: true,
+  },
+  {
+    name: "displayName",
+    type: "text",
+    autocomplete: "username",
+    label: "Username",
+    placeholder: "Choose a username",
     required: true,
   },
   {
@@ -59,9 +71,11 @@ const providers = [
 ];
 
 const schema = z.object({
+  name: z.string("Full name is required").min(3, "Must be at least 3 characters"),
   displayName: z
-    .string("Display name is required")
-    .min(2, "Must be at least 2 characters"),
+    .string("Username is required")
+    .min(2, "Must be at least 2 characters")
+    .regex(/^[A-Za-z0-9._-]+$/, "Use letters, numbers, dots, underscores, or hyphens"),
   email: z.email("Invalid email"),
   password: z
     .string("Password is required")
@@ -71,6 +85,10 @@ const schema = z.object({
 type Schema = z.output<typeof schema>;
 
 const auth = useAuthStore();
+const authFormRef = ref<{
+  setFieldErrors: (errors: Array<{ name: string; message: string }>) => void;
+  clearFieldErrors: () => void;
+} | null>(null);
 
 const showError = ref(false);
 const pending = ref(false);
@@ -79,6 +97,7 @@ const errorMessage = ref("");
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   showError.value = false;
   pending.value = true;
+  authFormRef.value?.clearFieldErrors();
   try {
     await auth.register(payload.data);
     await auth.fetchCurrentUser();
@@ -88,9 +107,33 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     });
     await navigateTo("/");
   } catch (error: any) {
-    errorMessage.value =
-      error?.message || "Registration failed. Please try again.";
-    showError.value = true;
+    const fieldErrors = extractApiFieldErrors(error, [
+      "displayName",
+      "name",
+      "email",
+      "password",
+    ]);
+
+    if (fieldErrors.length) {
+      authFormRef.value?.setFieldErrors(fieldErrors);
+      const summary = formatFieldErrors(fieldErrors);
+      errorMessage.value = summary;
+      showError.value = true;
+      toast.add({
+        title: "Validation failed",
+        description: summary,
+        color: "error",
+      });
+    } else {
+      errorMessage.value =
+        error?.message || "Registration failed. Please try again.";
+      showError.value = true;
+      toast.add({
+        title: "Registration failed",
+        description: errorMessage.value,
+        color: "error",
+      });
+    }
   } finally {
     pending.value = false;
   }
@@ -100,6 +143,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
 <template>
   <div class="flex flex-col items-center justify-center gap-4 p-4">
     <AuthForms
+      ref="authFormRef"
       :fields="fields"
       :providers="providers"
       :schema="schema"

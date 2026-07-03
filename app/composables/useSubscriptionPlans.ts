@@ -39,18 +39,21 @@ export const useSubscriptionPlans = () => {
       }
 
       // Create checkout session
-      const data = await $fetch("/api/subscription/create-checkout-session", {
+      const data = await $fetch<{
+        url?: string;
+        checkoutUrl?: string;
+        sessionId?: string;
+      }>("/api/subscription/create-checkout-session", {
         method: "POST",
         body: {
-          planName: plan.name,
-          priceInCents: Math.round(plan.price * 100),
-          currency: plan.currency,
+          planCode: plan.id,
         },
       });
 
       // Redirect to Stripe checkout
-      if (data?.checkoutUrl) {
-        await navigateTo(data.checkoutUrl, { external: true });
+      const checkoutUrl = data?.url || data?.checkoutUrl;
+      if (checkoutUrl) {
+        await navigateTo(checkoutUrl, { external: true });
       }
     } catch (err) {
       error.value =

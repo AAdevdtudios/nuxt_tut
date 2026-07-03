@@ -10,16 +10,15 @@
       label="Generate New Timetable"
       icon="i-lucide-plus"
       color="primary"
+      @click="isOpen = true"
     />
 
     <template #content>
-      <!-- DialogTitle (required for accessibility) -->
-      <UDialogTitle class="sr-only"> AI Timetable Generator </UDialogTitle>
-      <!-- DialogDescription (required for accessibility) -->
-      <UDialogDescription class="sr-only">
+      <h2 class="sr-only">AI Timetable Generator</h2>
+      <p class="sr-only">
         Configure your preferences and let AI create an optimized study schedule
         for you.
-      </UDialogDescription>
+      </p>
 
       <!-- Header -->
       <div class="flex flex-col w-full p-0 lg:p-6">
@@ -37,18 +36,20 @@
       <!-- Tabs -->
       <UTabs
         v-if="!isMobile"
+        v-model="desktopStepIndex"
         :items="selectItems"
-        :model-value="currentIndex"
-        @update:model-value="(idx) => goTo(Number(idx))"
+        value-key="value"
         class="mt-2 mb-4"
       />
 
       <!-- Mobile Select -->
-      <USelect
+      <USelectMenu
         v-else
+        v-model="mobileStepIndex"
         :items="selectItems"
-        :model-value="currentIndex"
-        @update:model-value="(idx) => goTo(Number(idx))"
+        value-key="value"
+        label-key="label"
+        :search-input="false"
         :icon="currentStep?.icon"
         class="mt-2 mb-4"
       />
@@ -57,9 +58,10 @@
       <div>
         <component
           :is="currentStep!.component"
+          :key="currentStep?.id"
           v-model:isComplete="currentStep!.isComplete"
           v-model:data="currentStep!.data"
-          :subjects="steps[0]?.data?.subjects ?? []"
+          :subjects="subjectsForSchedule"
           :all-data="
             steps.reduce((acc, step) => ({ ...acc, [step.id]: step.data }), {})
           "
@@ -108,7 +110,7 @@ import { useIsMobile } from "~/composable/useIsMobile";
 import { useStepper } from "~/composable/useStepper";
 import { useTimetableGenerator } from "~/composables/useTimetableGenerator";
 import { AI_TIMETABLE_STEPS } from "~/constants/ai-timetable.steps";
-import type { AITimetableWizardState, Step } from "~/types";
+import type { AITimetableWizardState, Step, SubjectsStepData } from "~/types";
 const { isMobile } = useIsMobile();
 const toast = useToast();
 const isOpen = ref(false);
@@ -132,6 +134,20 @@ const selectItems = computed(() =>
 
 const { currentIndex, currentStep, goNext, goPrev, goTo } =
   useStepper(steps);
+const desktopStepIndex = computed<number>({
+  get: () => currentIndex.value,
+  set: (idx) => goTo(Number(idx)),
+});
+const mobileStepIndex = computed<number>({
+  get: () => currentIndex.value,
+  set: (idx) => goTo(Number(idx)),
+});
+
+const subjectsForSchedule = computed(() => {
+  const subjectsStep = steps.find((step) => step.id === "subjects");
+  const data = subjectsStep?.data as SubjectsStepData | null | undefined;
+  return Array.isArray(data?.subjects) ? data.subjects : [];
+});
 
 const wizardState = computed<AITimetableWizardState>(() => ({
   subjects: {

@@ -103,8 +103,8 @@
           Generate Practice Questions
         </UButton>
         <p v-if="!hasEligibleSource" class="mt-2 text-xs text-muted-foreground">
-          Attach at least one document, note, or link to this project to generate
-          practice questions.
+          Attach at least one document, note, or link to this project to
+          generate practice questions.
         </p>
       </div>
     </UCard>
@@ -148,7 +148,7 @@
             variant="outline"
             icon="i-lucide-download"
             :disabled="!currentJob.jobId"
-            @click="fetchResult"
+            @click="() => fetchResult()"
           >
             Get Result
           </UButton>
@@ -241,7 +241,7 @@ const currentJob = computed(() => {
 const form = ref({
   numberOfQuestions: 10,
   sourceMode: "random" as "random" | "single",
-  libraryItemId: null as string | null,
+  libraryItemId: undefined as string | undefined,
   focusArea: "",
   additionalInstructions: "",
 });
@@ -277,7 +277,9 @@ const previewQuestions = computed(() => currentJob.value.questions.slice(0, 4));
 const isGenerationLocked = computed(() =>
   ["pending", "running"].includes(currentJob.value.status),
 );
-const hasEligibleSource = computed(() => eligiblePracticeSources.value.length > 0);
+const hasEligibleSource = computed(
+  () => eligiblePracticeSources.value.length > 0,
+);
 
 const statusBadgeColor = computed(() => {
   switch (currentJob.value.status) {
@@ -319,7 +321,8 @@ async function startGeneration() {
   if (!hasEligibleSource.value) {
     toast.add({
       title: "No valid source",
-      description: "Attach at least one document, note, or link before generating.",
+      description:
+        "Attach at least one document, note, or link before generating.",
       color: "warning",
     });
     return;
@@ -337,14 +340,16 @@ async function startGeneration() {
   try {
     isSubmitting.value = true;
 
+    const selectedLibraryItemId: string | null =
+      form.value.sourceMode === "single" ? form.value.libraryItemId || null : null;
+
     const payload = {
       projectId: projectId.value,
       numberOfQuestions: Number(form.value.numberOfQuestions),
       focusArea: form.value.focusArea || null,
       additionalInstructions: form.value.additionalInstructions || null,
       sourceMode: form.value.sourceMode,
-      libraryItemId:
-        form.value.sourceMode === "single" ? form.value.libraryItemId : null,
+      libraryItemId: selectedLibraryItemId,
     };
 
     const response = await $api.mutate<any>(
@@ -364,7 +369,7 @@ async function startGeneration() {
       jobId,
       status: response?.status || "pending",
       sourceMode: payload.sourceMode,
-      libraryItemId: payload.libraryItemId,
+      libraryItemId: selectedLibraryItemId,
       numberOfQuestions: payload.numberOfQuestions,
       focusArea: form.value.focusArea,
       additionalInstructions: form.value.additionalInstructions,
@@ -529,7 +534,7 @@ watch(
   () => form.value.sourceMode,
   (mode) => {
     if (mode !== "single") {
-      form.value.libraryItemId = null;
+      form.value.libraryItemId = undefined;
     }
   },
 );

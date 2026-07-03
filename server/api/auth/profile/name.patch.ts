@@ -2,6 +2,7 @@ import { createError, defineEventHandler, readBody } from "h3";
 import { z } from "zod";
 import type { UserProfile } from "~~/server/types";
 import { useApi } from "~~/server/utils/api";
+import { formatValidationError } from "~~/server/utils/validation";
 
 const UpdateProfileNameSchema = z.object({
   name: z.string().trim().min(3).max(100),
@@ -22,9 +23,7 @@ export default defineEventHandler(async (event) => {
     });
   } catch (error: any) {
     if (error?.name === "ZodError") {
-      const message =
-        error.errors?.map((issue: any) => issue.message).join(", ") ||
-        "Invalid name";
+      const message = formatValidationError(error) || "Invalid name";
 
       throw createError({
         statusCode: 400,

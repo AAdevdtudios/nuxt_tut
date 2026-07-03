@@ -256,7 +256,7 @@ import {
 } from "~/stores/practiceJobs";
 import { useProjectStore } from "~/stores/projects";
 
-definePageMeta({ layout: "dashboard" });
+definePageMeta({ layout: "newdash" });
 
 type EvaluateResultItem = {
   questionId: string;

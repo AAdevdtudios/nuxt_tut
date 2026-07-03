@@ -2,14 +2,17 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { ENV } from "~/constants/env";
 import type { AuthSessionResponse, User } from "~/types";
+import { useProjectStore } from "~/stores/projects";
+import { useLibraryStore } from "~/stores/libraries";
 
 const ACCESS_TOKEN_REFRESH_BUFFER_MS = 30 * 1000;
+const REFRESH_TOKEN_EXPIRY_BUFFER_MS = 5 * 1000;
 
 function toUser(session: AuthSessionResponse): User {
   return {
     id: session.userId,
     email: session.email,
-    name: session.displayName,
+    name: session.name,
     displayName: session.displayName,
     role: session.role,
   };
@@ -18,7 +21,10 @@ function toUser(session: AuthSessionResponse): User {
 function normalizeUserProfile(raw: any, current: User | null): User {
   const payload = raw?.data ?? raw?.user ?? raw ?? {};
   const subscription =
-    payload?.subscription ?? payload?.currentSubscription ?? current?.subscription ?? null;
+    payload?.subscription ??
+    payload?.currentSubscription ??
+    current?.subscription ??
+    null;
 
   return {
     id: String(payload?.id ?? current?.id ?? ""),
@@ -44,10 +50,22 @@ export const useAuthStore = defineStore(
     const user = ref<User | null>(null);
     const refreshRequest = ref<Promise<AuthSessionResponse> | null>(null);
 
+    function clearWorkspaceStores() {
+      const projectStore = useProjectStore();
+      const libraryStore = useLibraryStore();
+      projectStore.clearProjects();
+      libraryStore.clearLibraries();
+    }
+
     function setSession(session: AuthSessionResponse) {
       const baseUser = toUser(session);
       const shouldPreserveProfileExtras =
         user.value && user.value.id === baseUser.id;
+      const hasUserSwitched = user.value?.id && user.value.id !== baseUser.id;
+
+      if (hasUserSwitched) {
+        clearWorkspaceStores();
+      }
 
       accessToken.value = session.accessToken;
       accessTokenExpiresAtUtc.value = session.accessTokenExpiresAtUtc;
@@ -74,6 +92,7 @@ export const useAuthStore = defineStore(
       refreshToken.value = null;
       refreshTokenExpiresAtUtc.value = null;
       user.value = null;
+      clearWorkspaceStores();
     }
 
     function isAccessTokenExpired(bufferMs = ACCESS_TOKEN_REFRESH_BUFFER_MS) {
@@ -82,13 +101,41 @@ export const useAuthStore = defineStore(
       }
 
       return (
-        new Date(accessTokenExpiresAtUtc.value).getTime() - bufferMs <= Date.now()
+        new Date(accessTokenExpiresAtUtc.value).getTime() - bufferMs <=
+        Date.now()
+      );
+    }
+
+    function isRefreshTokenExpired(bufferMs = REFRESH_TOKEN_EXPIRY_BUFFER_MS) {
+      if (!refreshToken.value || !refreshTokenExpiresAtUtc.value) {
+        return true;
+      }
+
+      return (
+        new Date(refreshTokenExpiresAtUtc.value).getTime() - bufferMs <=
+        Date.now()
       );
     }
 
     async function ensureValidAccessToken() {
       if (!refreshToken.value) {
+        if (!accessToken.value) {
+          clearSession();
+          throw new Error("Session expired");
+        }
+
+        if (isAccessTokenExpired(0)) {
+          clearSession();
+          throw new Error("Session expired");
+        }
+
         return accessToken.value;
+      }
+
+      // If refresh token is expired, refresh will never work. Clear local session early.
+      if (isRefreshTokenExpired()) {
+        clearSession();
+        throw new Error("Session expired");
       }
 
       if (isAccessTokenExpired()) {
@@ -106,9 +153,6 @@ export const useAuthStore = defineStore(
         {
           method: "POST",
           body: payload,
-          onError: (error) => ({
-            message: error?.data?.message || "Invalid credentials",
-          }),
         },
       );
 
@@ -117,6 +161,7 @@ export const useAuthStore = defineStore(
     }
 
     async function register(payload: {
+      name: string;
       displayName: string;
       email: string;
       password: string;
@@ -127,9 +172,6 @@ export const useAuthStore = defineStore(
         {
           method: "POST",
           body: payload,
-          onError: (error) => ({
-            message: error?.data?.message || "Registration failed",
-          }),
         },
       );
 
@@ -142,6 +184,10 @@ export const useAuthStore = defineStore(
       const profile = await $api.fetch<any>(ENV.API_ENDPOINTS.ME, {
         method: "GET",
       });
+      if (!profile) {
+        clearSession();
+        throw new Error("Unauthorized");
+      }
       const normalized = normalizeUserProfile(profile, user.value);
       setUser(normalized);
       return normalized;
@@ -170,6 +216,43 @@ export const useAuthStore = defineStore(
       return response;
     }
 
+    async function updateProfileUsername(displayName: string) {
+      const { $api } = useNuxtApp();
+      const response = await $api.mutate<{
+        message: string;
+        user: User;
+      }>(ENV.API_ENDPOINTS.UPDATE_PROFILE_USERNAME, {
+        method: "PATCH",
+        body: { displayName },
+      });
+
+      if (response?.user) setUser(response.user);
+      return response;
+    }
+
+    async function deleteAccount() {
+      const { $api } = useNuxtApp();
+      const response = await $api.mutate<{ message: string }>(
+        ENV.API_ENDPOINTS.DELETE_ACCOUNT,
+        { method: "DELETE" },
+      );
+      clearSession();
+      return response;
+    }
+
+    async function recoverAccount(payload: { email: string; password: string }) {
+      const { $api } = useNuxtApp();
+      const session = await $api.mutate<AuthSessionResponse>(
+        ENV.API_ENDPOINTS.RECOVER_ACCOUNT,
+        {
+          method: "POST",
+          body: payload,
+        },
+      );
+      setSession(session);
+      return session;
+    }
+
     async function refreshAccessToken(force = false) {
       if (!refreshToken.value) {
         throw new Error("Missing refresh token");
@@ -191,6 +274,10 @@ export const useAuthStore = defineStore(
           }),
         })
         .then((session) => {
+          if (!session?.accessToken || !session?.refreshToken) {
+            clearSession();
+            throw new Error("Session expired");
+          }
           setSession(session);
           return session;
         })
@@ -217,10 +304,39 @@ export const useAuthStore = defineStore(
       }
     }
 
+    async function forgotPassword(email: string) {
+      const { $api } = useNuxtApp();
+      return await $api.mutate<{
+        message?: string;
+        resetToken?: string | null;
+      }>(ENV.API_ENDPOINTS.FORGOT_PASSWORD, {
+        method: "POST",
+        body: {
+          email,
+        },
+      });
+    }
+
+    async function resetPassword(payload: {
+      token: string;
+      newPassword: string;
+    }) {
+      const { $api } = useNuxtApp();
+      return await $api.mutate<{
+        message?: string;
+      }>(ENV.API_ENDPOINTS.RESET_PASSWORD, {
+        method: "POST",
+        body: payload,
+      });
+    }
+
     const isAuthenticated = computed(() => Boolean(accessToken.value));
-    const hasSession = computed(
-      () => Boolean(accessToken.value || refreshToken.value),
-    );
+    const hasSession = computed(() => {
+      // "Session" here means we have at least one usable token.
+      if (refreshToken.value && !isRefreshTokenExpired(0)) return true;
+      if (accessToken.value && !isAccessTokenExpired(0)) return true;
+      return false;
+    });
     const currentUser = computed(() => user.value);
 
     return {
@@ -236,13 +352,19 @@ export const useAuthStore = defineStore(
       register,
       fetchCurrentUser,
       updateProfileName,
+      updateProfileUsername,
+      deleteAccount,
+      recoverAccount,
       refreshAccessToken,
       ensureValidAccessToken,
       logout,
+      forgotPassword,
+      resetPassword,
       isAuthenticated,
       hasSession,
       currentUser,
       isAccessTokenExpired,
+      isRefreshTokenExpired,
     };
   },
   {

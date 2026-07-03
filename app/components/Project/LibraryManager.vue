@@ -81,12 +81,12 @@
       <template #content>
         <div class="p-4">
           <div class="flex flex-col">
-            <UDialogTitle class="text-lg font-semibold">
+            <h2 class="text-lg font-semibold">
               {{ config.modalTitle }}
-            </UDialogTitle>
-            <UDialogDescription class="text-sm text-muted mb-4">
+            </h2>
+            <p class="text-sm text-muted mb-4">
               {{ config.modalDescription }}
-            </UDialogDescription>
+            </p>
           </div>
 
           <div class="space-y-4">
@@ -458,16 +458,12 @@ async function removeItem(item: LibraryItem) {
       (entry) => getItemId(entry) !== itemId,
     );
 
-    const mergedLibraries = getCurrentLibraryIds().filter(
+    currentAttachedIds.value = getCurrentLibraryIds().filter(
       (id) => id !== itemId,
     );
-    currentAttachedIds.value = [...mergedLibraries];
 
-    await $api.mutate(`/api/projects/${props.projectId}`, {
-      method: "PUT",
-      body: {
-        libraries: mergedLibraries,
-      },
+    await $api.mutate(`/api/projects/${props.projectId}/libraries/${itemId}`, {
+      method: "DELETE",
     });
 
     await fetchAttachedItems();

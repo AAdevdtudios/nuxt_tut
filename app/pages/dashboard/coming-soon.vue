@@ -1,27 +1,32 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
 });
 
 type StatusType = "in-progress" | "planned" | "exploring";
 
 type Feature = {
-  id: number;
+  id: string;
   icon: string;
   title: string;
   description: string;
   longDescription: string;
   status: StatusType;
-  eta: string;
+  eta: string | null;
   category: string;
   upvotes: number;
+  hasVoted?: boolean;
 };
 
-const features: Feature[] = [
+type FeatureListResponse = {
+  items?: Feature[];
+};
+
+const fallbackFeatures: Feature[] = [
   {
-    id: 1,
+    id: "local-1",
     icon: "i-lucide-brain-circuit",
     title: "AI Study Plans",
     description:
@@ -34,7 +39,7 @@ const features: Feature[] = [
     upvotes: 342,
   },
   {
-    id: 2,
+    id: "local-2",
     icon: "i-lucide-users",
     title: "Collaborative Study Rooms",
     description:
@@ -47,7 +52,7 @@ const features: Feature[] = [
     upvotes: 287,
   },
   {
-    id: 3,
+    id: "local-3",
     icon: "i-lucide-bar-chart-3",
     title: "Advanced Analytics Dashboard",
     description:
@@ -60,7 +65,7 @@ const features: Feature[] = [
     upvotes: 219,
   },
   {
-    id: 4,
+    id: "local-4",
     icon: "i-lucide-smartphone",
     title: "Mobile App (iOS & Android)",
     description:
@@ -73,7 +78,7 @@ const features: Feature[] = [
     upvotes: 456,
   },
   {
-    id: 5,
+    id: "local-5",
     icon: "i-lucide-mic",
     title: "Voice-Powered AI Tutor",
     description:
@@ -86,7 +91,7 @@ const features: Feature[] = [
     upvotes: 198,
   },
   {
-    id: 6,
+    id: "local-6",
     icon: "i-lucide-video",
     title: "Video Lecture Summarizer",
     description:
@@ -99,7 +104,7 @@ const features: Feature[] = [
     upvotes: 378,
   },
   {
-    id: 7,
+    id: "local-7",
     icon: "i-lucide-globe",
     title: "Multi-Language Support",
     description: "Full platform localization and AI interactions in 20+ languages.",
@@ -111,7 +116,7 @@ const features: Feature[] = [
     upvotes: 167,
   },
   {
-    id: 8,
+    id: "local-8",
     icon: "i-lucide-share-2",
     title: "Community Marketplace",
     description:
@@ -124,7 +129,7 @@ const features: Feature[] = [
     upvotes: 234,
   },
   {
-    id: 9,
+    id: "local-9",
     icon: "i-lucide-layers",
     title: "Spaced Repetition Engine",
     description:
@@ -137,7 +142,7 @@ const features: Feature[] = [
     upvotes: 312,
   },
   {
-    id: 10,
+    id: "local-10",
     icon: "i-lucide-bot",
     title: "Assignment Auto-Checker",
     description:
@@ -150,7 +155,7 @@ const features: Feature[] = [
     upvotes: 289,
   },
   {
-    id: 11,
+    id: "local-11",
     icon: "i-lucide-graduation-cap",
     title: "Certification & Badges",
     description:
@@ -163,7 +168,7 @@ const features: Feature[] = [
     upvotes: 145,
   },
   {
-    id: 12,
+    id: "local-12",
     icon: "i-lucide-file-text",
     title: "Smart Note-Taking",
     description:
@@ -201,16 +206,24 @@ const statusConfig: Record<
   },
 };
 
-const categories = ["All", "AI", "Social", "Analytics", "Platform", "Learning"];
-
+const { $api } = useNuxtApp();
+const toast = useToast();
+const features = ref<Feature[]>(fallbackFeatures);
 const selectedCategory = ref("All");
 const selectedStatus = ref<StatusType | "all">("all");
-const expandedFeature = ref<number | null>(null);
-const upvotedFeatures = ref(new Set<number>());
-const notifyFeatures = ref(new Set<number>());
+const expandedFeature = ref<string | null>(null);
+const notifyFeatures = ref(new Set<string>());
+const isLoading = ref(false);
+
+const categories = computed(() => [
+  "All",
+  ...Array.from(new Set(features.value.map((item) => item.category))).filter(
+    Boolean,
+  ),
+]);
 
 const filteredFeatures = computed(() =>
-  features.filter((item) => {
+  features.value.filter((item) => {
     const matchCategory =
       selectedCategory.value === "All" || item.category === selectedCategory.value;
     const matchStatus =
@@ -220,26 +233,53 @@ const filteredFeatures = computed(() =>
 );
 
 const inProgressCount = computed(
-  () => features.filter((f) => f.status === "in-progress").length,
+  () => features.value.filter((f) => f.status === "in-progress").length,
 );
 const plannedCount = computed(
-  () => features.filter((f) => f.status === "planned").length,
+  () => features.value.filter((f) => f.status === "planned").length,
 );
 const exploringCount = computed(
-  () => features.filter((f) => f.status === "exploring").length,
+  () => features.value.filter((f) => f.status === "exploring").length,
 );
 
-const toggleUpvote = (id: number) => {
-  const next = new Set(upvotedFeatures.value);
-  if (next.has(id)) {
-    next.delete(id);
-  } else {
-    next.add(id);
+const toggleUpvote = async (feature: Feature) => {
+  if (feature.id.startsWith("local-")) {
+    feature.hasVoted = !feature.hasVoted;
+    feature.upvotes += feature.hasVoted ? 1 : -1;
+    return;
   }
-  upvotedFeatures.value = next;
+
+  const previous = { ...feature };
+  feature.hasVoted = !feature.hasVoted;
+  feature.upvotes += feature.hasVoted ? 1 : -1;
+
+  try {
+    const updated = await $api.mutate<Feature>(
+      `/api/feedback/${feature.id}/vote`,
+      { method: "POST" },
+    );
+    features.value = features.value.map((item) =>
+      item.id === feature.id
+        ? {
+            ...item,
+            upvotes: Number(updated.upvotes ?? (updated as any).voteCount ?? item.upvotes),
+            hasVoted: Boolean(updated.hasVoted),
+          }
+        : item,
+    );
+  } catch (error: any) {
+    features.value = features.value.map((item) =>
+      item.id === feature.id ? previous : item,
+    );
+    toast.add({
+      title: "Vote failed",
+      description: error?.message || "Could not update your vote.",
+      color: "error",
+    });
+  }
 };
 
-const toggleNotify = (id: number) => {
+const toggleNotify = (id: string) => {
   const next = new Set(notifyFeatures.value);
   if (next.has(id)) {
     next.delete(id);
@@ -248,6 +288,43 @@ const toggleNotify = (id: number) => {
   }
   notifyFeatures.value = next;
 };
+
+const fetchComingSoon = async () => {
+  try {
+    isLoading.value = true;
+    const response = await $api.fetch<FeatureListResponse>(
+      "/api/features/coming-soon",
+      {
+        method: "GET",
+        query: {
+          page: 1,
+          pageSize: 50,
+        },
+      },
+    );
+
+    if (Array.isArray(response.items) && response.items.length > 0) {
+      features.value = response.items.map((item) => ({
+        ...item,
+        icon: item.icon || "i-lucide-sparkles",
+        status: statusConfig[item.status] ? item.status : "exploring",
+        category: item.category || "General",
+        upvotes: Number(item.upvotes || 0),
+      }));
+    }
+  } catch (error: any) {
+    toast.add({
+      title: "Roadmap unavailable",
+      description:
+        error?.message || "Showing the default roadmap while we reconnect.",
+      color: "warning",
+    });
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(fetchComingSoon);
 </script>
 
 <template>
@@ -256,6 +333,8 @@ const toggleNotify = (id: number) => {
     description="Upcoming features we are building to supercharge your learning."
   >
     <div class="space-y-8">
+      <UProgress v-if="isLoading" animation="carousel" />
+
       <UCard class="relative overflow-hidden border-default">
         <div class="absolute -right-10 -top-10 h-52 w-52 rounded-full bg-primary/5" />
         <div class="absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-primary/5" />
@@ -424,7 +503,7 @@ const toggleNotify = (id: number) => {
                 </div>
                 <div class="flex items-center gap-2 text-xs text-muted-foreground">
                   <UIcon name="i-lucide-clock" class="h-3.5 w-3.5" />
-                  <span>Estimated launch: {{ feature.eta }}</span>
+                  <span>Estimated launch: {{ feature.eta || "TBA" }}</span>
                 </div>
               </div>
 
@@ -445,20 +524,16 @@ const toggleNotify = (id: number) => {
             <div class="flex items-center gap-2 md:flex-col md:items-end">
               <UButton
                 size="sm"
-                :color="upvotedFeatures.has(feature.id) ? 'primary' : 'neutral'"
-                :variant="
-                  upvotedFeatures.has(feature.id) ? 'soft' : 'outline'
-                "
+                :color="feature.hasVoted ? 'primary' : 'neutral'"
+                :variant="feature.hasVoted ? 'soft' : 'outline'"
                 class="gap-2"
-                @click="toggleUpvote(feature.id)"
+                @click="toggleUpvote(feature)"
               >
                 <UIcon
                   name="i-lucide-zap"
-                  :class="upvotedFeatures.has(feature.id) ? 'text-primary' : ''"
+                  :class="feature.hasVoted ? 'text-primary' : ''"
                 />
-                {{
-                  feature.upvotes + (upvotedFeatures.has(feature.id) ? 1 : 0)
-                }}
+                {{ feature.upvotes }}
               </UButton>
               <UButton
                 size="sm"

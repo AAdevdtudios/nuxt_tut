@@ -19,6 +19,11 @@ import type {
   ProjectUpdateRequest,
 } from "~/types/project.types";
 
+type StoreApiClient = {
+  fetch: <T = unknown>(url: string, options?: any) => Promise<T>;
+  mutate: <T = unknown>(url: string, options?: any) => Promise<T>;
+};
+
 export interface NormalizedProject {
   id: string;
   documentId: string;
@@ -38,11 +43,11 @@ export interface NormalizedProject {
 }
 
 export const useProjectStore = defineStore("projects", () => {
-  const getApi = () => {
+  const getApi = (): StoreApiClient => {
     const nuxtApp = useNuxtApp();
 
     if (nuxtApp.$api) {
-      return nuxtApp.$api;
+      return nuxtApp.$api as StoreApiClient;
     }
 
     return {
@@ -102,6 +107,9 @@ export const useProjectStore = defineStore("projects", () => {
         method: "GET",
       });
 
+      // When auth expires during SSR/client navigation, `$api` may redirect and return `undefined`.
+      if (!response) return;
+
       if (!response?.data) throw new Error("Invalid response structure");
 
       // Normalize: Extract libraries and store only IDs
@@ -137,6 +145,7 @@ export const useProjectStore = defineStore("projects", () => {
         method: "GET",
       });
 
+      if (!response) return null;
       if (!response?.data) throw new Error("Invalid response structure");
 
       projectsById.value[documentId] = normalizeProject(response.data);
@@ -164,6 +173,7 @@ export const useProjectStore = defineStore("projects", () => {
         body: payload,
       });
 
+      if (!response) return;
       if (!response?.data) throw new Error("Invalid response structure");
 
       const normalized = normalizeProject(response.data);
@@ -195,6 +205,7 @@ export const useProjectStore = defineStore("projects", () => {
         body: payload,
       });
 
+      if (!response) return;
       if (!response?.data) throw new Error("Invalid response structure");
 
       const normalized = normalizeProject(response.data);

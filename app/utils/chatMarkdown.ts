@@ -46,8 +46,10 @@ export function renderChatMarkdown(markdown: string): string {
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
       closeLists();
-      const level = headingMatch[1].length;
-      out.push(`<h${level}>${applyInlineMarkdown(headingMatch[2])}</h${level}>`);
+      const marker = headingMatch[1] || "#";
+      const content = headingMatch[2] || "";
+      const level = marker.length;
+      out.push(`<h${level}>${applyInlineMarkdown(content)}</h${level}>`);
       continue;
     }
 
@@ -61,7 +63,7 @@ export function renderChatMarkdown(markdown: string): string {
         out.push("<ul>");
         inUl = true;
       }
-      out.push(`<li>${applyInlineMarkdown(ulMatch[1])}</li>`);
+      out.push(`<li>${applyInlineMarkdown(ulMatch[1] || "")}</li>`);
       continue;
     }
 
@@ -75,7 +77,7 @@ export function renderChatMarkdown(markdown: string): string {
         out.push("<ol>");
         inOl = true;
       }
-      out.push(`<li>${applyInlineMarkdown(olMatch[1])}</li>`);
+      out.push(`<li>${applyInlineMarkdown(olMatch[1] || "")}</li>`);
       continue;
     }
 

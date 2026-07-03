@@ -1,6 +1,7 @@
 export interface AuthSessionResponse {
   userId: string;
   email: string;
+  name?: string;
   displayName: string;
   role: string;
   accessToken: string;
@@ -14,6 +15,10 @@ export interface SubscriptionUsage {
   questionLimit: number;
   essayGradingsUsed: number;
   essayGradingsLimit: number;
+  reportsUsed: number;
+  reportLimit: number;
+  chatsUsed: number;
+  chatLimit: number;
   documentsUsed: number;
   documentLimit: number;
   processedPagesUsed: number;

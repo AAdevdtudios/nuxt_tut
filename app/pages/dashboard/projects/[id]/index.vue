@@ -1,8 +1,7 @@
 <template>
   <DashboardBodyLayout title="">
-    <div
-      class="mb-4 flex flex-col md:flex-row gap-2 items-center md:justify-between"
-    >
+    <div class="ga-surface-warm mb-6 rounded-[1.75rem] border p-5 sm:p-7">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div class="flex items-center gap-2">
         <UButton
           variant="ghost"
@@ -10,7 +9,7 @@
           icon="i-lucide-arrow-left"
         />
         <div
-          class="p-1 md:p-3 rounded-lg items-center justify-center flex"
+          class="flex items-center justify-center rounded-xl p-2 md:p-3"
           :class="displayProject?.colorClass"
         >
           <UIcon
@@ -23,14 +22,13 @@
           />
         </div>
         <div>
-          <h2 class="text-2xl md:text-3xl font-bold text-foreground">
+          <p class="ga-subtle mb-1 text-[10px] font-bold uppercase tracking-[0.2em]">Project workspace</p>
+          <h2 class="ga-heading font-serif text-3xl font-semibold md:text-4xl">
             {{ displayProject?.title || "Project" }}
           </h2>
           <p
-            class="text-xs md:text-base text-muted max-w-md overflow-hidden text-ellipsis whitespace-nowrap"
-            :title="
-              displayProject?.description || 'No description provided.'
-            "
+            class="ga-muted max-w-md overflow-hidden text-ellipsis whitespace-nowrap text-xs md:text-sm"
+            :title="displayProject?.description || 'No description provided.'"
           >
             {{
               (displayProject?.description ?? "").length > 100
@@ -40,46 +38,38 @@
           </p>
         </div>
       </div>
-      <div class="flex gap-2 mt-2 md:mt-0">
-        <div class="flex items-center gap-2 px-4 py-2">
+      <div class="flex flex-wrap gap-2 md:mt-0">
+        <div class="ga-surface ga-muted flex items-center gap-2 rounded-full border px-4 py-2 text-xs">
           <UIcon
             name="i-lucide-calendar"
             class="h-4 w-4 text-muted-foreground"
           />
-          <span>
-            Due {{ displayProject?.formattedDueDate || "N/A" }}
-          </span>
+          <span> Due {{ displayProject?.formattedDueDate || "N/A" }} </span>
         </div>
-        <div class="flex items-center gap-2 px-4 py-2">
+        <div class="ga-surface ga-muted flex items-center gap-2 rounded-full border px-4 py-2 text-xs">
           <UIcon name="i-lucide-target" class="h-4 w-4 text-muted-foreground" />
           <span> {{ displayProject?.progress ?? 0 }}% complete </span>
         </div>
       </div>
+      </div>
     </div>
-    <UTabs
-      v-if="!isMobile"
-      :model-value="currentTab"
-      @update:model-value="getCurrentTab"
-      :items="PROJECT_TABS"
-      class="mb-3 mt-2"
-      :ui="tabUi"
-    />
     <USelect
-      v-else
+      v-if="isMobile"
       v-model="currentTab"
-      default-value="overview"
       variant="soft"
       :icon="icon"
       size="xl"
-      :items="PROJECT_TABS"
+      :items="tabItems"
       class="mb-3 w-full"
     />
     <component
-      :is="currentTabComponent()"
+      :is="currentTabComponent"
       v-bind="currentTabProps"
+      :key="currentTab"
       @materials-attached="handleMaterialsAttached"
       @notes-attached="handleNotesAttached"
       @project-preview-changed="handleProjectPreviewChanged"
+      @open-tab="currentTab = $event"
     />
   </DashboardBodyLayout>
 </template>
@@ -94,9 +84,11 @@ import type { ProjectIcon } from "~/types/project.types";
 import { useProjectStore } from "~/stores/projects";
 import { useLibraryStore } from "~/stores/libraries";
 
-var currentTab = ref("overview");
 const { $api } = useNuxtApp();
 const route = useRoute();
+const currentTab = ref<string>(
+  typeof route.query.tab === "string" ? route.query.tab : "overview",
+);
 const documentId = route.params.id as string;
 const projectStore = useProjectStore();
 const libraryStore = useLibraryStore();
@@ -126,7 +118,10 @@ const displayProject = computed(() => {
   return {
     ...merged,
     formattedDueDate: projectService.formatDate(merged.end),
-    formattedDateRange: projectService.formatDateRange(merged.start, merged.end),
+    formattedDateRange: projectService.formatDateRange(
+      merged.start,
+      merged.end,
+    ),
     colorClass: projectService.getColorClass(merged.color),
   };
 });
@@ -141,10 +136,19 @@ async function syncProjectData() {
   } catch {}
 
   await fetchProjectAnalytics();
+  await fetchAdaptiveProgressReport();
 }
 
 const icon = computed(
   () => PROJECT_TABS.find((item) => item.value === currentTab.value)?.icon,
+);
+
+const tabItems = computed(() =>
+  PROJECT_TABS.map((item) => ({
+    label: item.label,
+    value: item.value,
+    icon: item.icon,
+  })),
 );
 const materialLibraries = computed(() =>
   projectLibraries.value.filter((item) => item && item.libraryType !== "note"),
@@ -162,6 +166,19 @@ type ProjectAnalytics = {
 };
 
 const projectAnalytics = ref<ProjectAnalytics | null>(null);
+type AdaptiveProgressReport = {
+  current?: {
+    progressLevel?: number;
+    progressScore?: number;
+    contributingSignalsCount?: number;
+  };
+  attemptsInLast30Days?: number;
+  averageScoreInLast30Days?: number;
+  correctAnswersInLast30Days?: number;
+  totalAnswersInLast30Days?: number;
+};
+
+const adaptiveProgressReport = ref<AdaptiveProgressReport | null>(null);
 
 async function fetchProjectAnalytics() {
   try {
@@ -180,6 +197,17 @@ async function fetchProjectAnalytics() {
   }
 }
 
+async function fetchAdaptiveProgressReport() {
+  try {
+    adaptiveProgressReport.value = await $api.fetch<AdaptiveProgressReport>(
+      `/api/projects/${documentId}/adaptive/progress/report`,
+      { method: "GET" },
+    );
+  } catch {
+    adaptiveProgressReport.value = null;
+  }
+}
+
 await syncProjectData();
 
 watch(
@@ -189,14 +217,7 @@ watch(
   },
 );
 
-const tabUi = computed(() => {
-  const colorClass = displayProject?.value?.colorClass || "";
-  return {
-    indicator: `${colorClass}`,
-  };
-});
-
-const currentTabProps = computed(() => {
+const currentTabProps = computed<Record<string, any>>(() => {
   const project = projectWithMetadata.value;
 
   switch (currentTab.value) {
@@ -206,15 +227,11 @@ const currentTabProps = computed(() => {
         materials: materialLibraries.value,
         notes: noteLibraries.value,
         recentActivities: projectAnalytics.value?.recentActivities ?? [],
+        progressReport: adaptiveProgressReport.value,
       };
     case "materials":
       return {
         materials: materialLibraries.value,
-        projectId: documentId,
-        attachedLibraryIds: project?.libraryIds ?? [],
-      };
-    case "notes":
-      return {
         notes: noteLibraries.value,
         notesCount: project?.notesCount ?? 0,
         projectId: documentId,
@@ -231,6 +248,11 @@ const currentTabProps = computed(() => {
         projectId: documentId,
         materials: projectLibraries.value,
       };
+    case "tools":
+      return {
+        projectId: documentId,
+        materials: projectLibraries.value,
+      };
     case "ai_tutor":
       return {
         projectId: documentId,
@@ -241,14 +263,10 @@ const currentTabProps = computed(() => {
   }
 });
 
-function getCurrentTab(val: string | number) {
-  currentTab.value = String(val);
-  currentTabComponent();
-}
-function currentTabComponent() {
+const currentTabComponent = computed<any>(() => {
   return PROJECT_TABS.find((item) => item.value === currentTab.value)
     ?.component;
-}
+});
 
 async function handleMaterialsAttached() {
   await syncProjectData();
@@ -272,6 +290,33 @@ function handleProjectPreviewChanged(
 }
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
+});
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    const nextTab = typeof tab === "string" ? tab : "overview";
+    if (
+      PROJECT_TABS.some((item) => item.value === nextTab) &&
+      currentTab.value !== nextTab
+    ) {
+      currentTab.value = nextTab;
+    }
+  },
+);
+
+watch(currentTab, async (tab) => {
+  const routeTab =
+    typeof route.query.tab === "string" ? route.query.tab : "overview";
+  if (tab === routeTab) return;
+
+  await navigateTo({
+    path: route.path,
+    query: {
+      ...route.query,
+      tab,
+    },
+  });
 });
 </script>

@@ -1,10 +1,10 @@
 import {
   ProjectAITutorTab,
   ProjectMaterialsTab,
-  ProjectNotesTab,
   ProjectOverviewTab,
   ProjectPracticeTab,
   ProjectSettingsTab,
+  ProjectToolsTab,
 } from "#components";
 import type { ProjectIcon } from "~/types/project.types";
 
@@ -22,16 +22,16 @@ export const PROJECT_TABS = [
     value: "materials",
   },
   {
-    label: "Notes",
-    icon: "i-lucide-file-text",
-    component: ProjectNotesTab,
-    value: "notes",
-  },
-  {
     label: "Practice",
     icon: "i-lucide-bar-chart-2",
     component: ProjectPracticeTab,
     value: "practice",
+  },
+  {
+    label: "Research Notes",
+    icon: "i-lucide-file-search",
+    component: ProjectToolsTab,
+    value: "tools",
   },
   {
     label: "AI Tutor",

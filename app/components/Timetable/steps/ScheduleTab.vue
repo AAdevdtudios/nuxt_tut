@@ -7,10 +7,12 @@
         class="w-full font-medium text-md"
         :ui="{ description: 'text-sm text-muted' }"
       >
-        <USelect
-          v-model="hoursPerDay"
+        <USelectMenu
           :items="hoursPerDayOptions"
+          v-model="selectedHours"
+          value-key="value"
           class="w-full"
+          :search-input="false"
         />
       </UFormField>
       <UFormField
@@ -19,26 +21,32 @@
         class="w-full font-medium text-md"
         :ui="{ description: 'text-sm text-muted' }"
       >
-        <USelect
-          v-model="breakDuration"
+        <USelectMenu
           :items="breakDurationOptions"
+          v-model="selectedBreaks"
+          value-key="value"
           class="w-full"
+          :search-input="false"
         />
       </UFormField>
     </div>
+
     <UFormField
       label="Study Style"
       description="Specify your preferred study style"
       class="w-full mt-4 font-medium text-md"
       :ui="{ description: 'text-sm text-muted' }"
     >
-      <USelect
-        v-model="studyStyle"
+      <USelectMenu
         :items="studyStyleOptions"
+        v-model="selectedStyle"
+        value-key="value"
         class="w-full"
         description-key="description"
+        :search-input="false"
       />
     </UFormField>
+
     <UFormField
       label="Unavailable Time Slots"
       description="Specify your unavailable time slots"
@@ -46,11 +54,12 @@
       :ui="{ description: 'text-sm text-muted' }"
     >
       <div class="flex flex-col md:flex-row mt-2 gap-4">
-        <USelect
-          v-model="unavailableDay"
+        <USelectMenu
           :items="daysOfWeek"
-          placeholder="Day of the week"
+          v-model="selectedUnavailable"
+          value-key="value"
           class="w-full"
+          :search-input="false"
         />
         <UInput
           v-model="unavailableStart"
@@ -68,10 +77,13 @@
           icon="i-lucide-plus"
           color="primary"
           class="w-full md:w-fit items-center justify-center"
-          :disabled="!unavailableDay || !unavailableStart || !unavailableEnd"
+          :disabled="
+            !selectedUnavailable || !unavailableStart || !unavailableEnd
+          "
           @click="addUnavailableSlot"
         />
       </div>
+
       <div v-if="unavailableSlots.length" class="mt-4 space-y-2">
         <div
           v-for="(slot, idx) in unavailableSlots"
@@ -94,8 +106,15 @@
     </UFormField>
   </div>
 </template>
+
 <script setup lang="ts">
-import type { ScheduleStepData, SubjectsStepData, StudyStyle, UnavailableSlot } from "~/types";
+import type { SelectMenuItem } from "@nuxt/ui";
+import type {
+  ScheduleStepData,
+  SubjectsStepData,
+  StudyStyle,
+  UnavailableSlot,
+} from "~/types";
 
 const isComplete = defineModel<boolean>("isComplete", { required: true });
 const data = defineModel<ScheduleStepData | null>("data", { required: true });
@@ -103,40 +122,52 @@ defineProps<{
   subjects: SubjectsStepData["subjects"];
 }>();
 
-const hoursPerDay = ref<number>(6);
-const breakDuration = ref<number>(15);
-const studyStyle = ref<StudyStyle>("balanced");
-const unavailableDay = ref<"Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun" | "">("");
-const unavailableStart = ref<string>("");
-const unavailableEnd = ref<string>("");
-const unavailableSlots = ref<UnavailableSlot[]>([]);
+type NumberOption = { label: string; value: number };
+type StudyStyleOption = {
+  label: string;
+  value: StudyStyle;
+  description: string;
+};
+type DayValue = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+type DayOption = { label: string; value: DayValue };
 
-const hoursPerDayOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10].map((h) => ({
-  label: `${h} hours`,
-  value: h,
-}));
-const breakDurationOptions = [10, 15, 20, 30, 45, 60].map((m) => ({
-  label: `${m} min`,
-  value: m,
-}));
-const studyStyleOptions = [
+const selectedUnavailable = ref<DayValue | undefined>(undefined);
+const unavailableStart = ref("");
+const unavailableEnd = ref("");
+
+const hoursPerDayOptions: SelectMenuItem[] = [2, 3, 4, 5, 6, 7, 8, 9, 10].map(
+  (h) => ({
+    label: `${h} hours`,
+    value: h,
+  }),
+);
+
+const breakDurationOptions: NumberOption[] = [10, 15, 20, 30, 45, 60].map(
+  (m) => ({
+    label: `${m} min`,
+    value: m,
+  }),
+);
+
+const studyStyleOptions: StudyStyleOption[] = [
   {
-    label: "Intensive",
-    value: "intensive",
+    label: "Cram",
+    value: "cram",
     description: "Longer, focused sessions with fewer breaks.",
   },
   {
     label: "Distributed",
-    value: "balanced",
+    value: "distributed",
     description: "Balanced sessions with regular breaks.",
   },
   {
-    label: "Flexible",
-    value: "light",
+    label: "Balanced",
+    value: "balanced",
     description: "Shorter, flexible sessions with more breaks.",
   },
 ];
-const daysOfWeek = [
+
+const daysOfWeek: DayOption[] = [
   { label: "Monday", value: "Mon" },
   { label: "Tuesday", value: "Tue" },
   { label: "Wednesday", value: "Wed" },
@@ -146,46 +177,82 @@ const daysOfWeek = [
   { label: "Sunday", value: "Sun" },
 ];
 
+function normalizeStudyStyle(value: unknown): StudyStyle {
+  return value === "cram" || value === "distributed" || value === "balanced"
+    ? value
+    : "balanced";
+}
+
+function ensureScheduleData(): ScheduleStepData {
+  if (!data.value) {
+    data.value = {
+      hoursPerDay: 4,
+      breakDurationMinutes: 15,
+      studyStyle: "balanced",
+      unavailableSlots: [],
+    };
+  }
+
+  return data.value;
+}
+
+const selectedHours = computed<number>({
+  get: () => data.value?.hoursPerDay ?? 4,
+  set: (value) => {
+    ensureScheduleData().hoursPerDay = value ?? 4;
+    isComplete.value = true;
+  },
+});
+
+const selectedBreaks = computed<number>({
+  get: () => data.value?.breakDurationMinutes ?? 15,
+  set: (value) => {
+    ensureScheduleData().breakDurationMinutes = value ?? 15;
+    isComplete.value = true;
+  },
+});
+
+const selectedStyle = computed<StudyStyle>({
+  get: () => normalizeStudyStyle(data.value?.studyStyle),
+  set: (value) => {
+    ensureScheduleData().studyStyle = normalizeStudyStyle(value);
+    isComplete.value = true;
+  },
+});
+
+const unavailableSlots = computed<UnavailableSlot[]>({
+  get: () => data.value?.unavailableSlots ?? [],
+  set: (value) => {
+    ensureScheduleData().unavailableSlots = value;
+    isComplete.value = true;
+  },
+});
+
 function addUnavailableSlot() {
-  if (!unavailableDay.value || !unavailableStart.value || !unavailableEnd.value)
+  if (
+    !selectedUnavailable.value ||
+    !unavailableStart.value ||
+    !unavailableEnd.value
+  )
     return;
-  unavailableSlots.value.push({
-    day: unavailableDay.value,
+
+  unavailableSlots.value = [
+    ...unavailableSlots.value,
+    {
+    day: selectedUnavailable.value,
     time: { start: unavailableStart.value, end: unavailableEnd.value },
-  });
-  unavailableDay.value = "";
+    },
+  ];
+  selectedUnavailable.value = undefined;
   unavailableStart.value = "";
   unavailableEnd.value = "";
+  isComplete.value = true;
 }
 
 function removeUnavailableSlot(idx: number) {
-  unavailableSlots.value.splice(idx, 1);
+  unavailableSlots.value = unavailableSlots.value.filter(
+    (_, index) => index !== idx,
+  );
+  isComplete.value = true;
 }
-
-watch(
-  () => data.value,
-  (value) => {
-    if (!value) return;
-
-    hoursPerDay.value = value.hoursPerDay;
-    breakDuration.value = value.breakDurationMinutes;
-    studyStyle.value = value.studyStyle;
-    unavailableSlots.value = [...value.unavailableSlots];
-  },
-  { immediate: true },
-);
-
-watch(
-  [hoursPerDay, breakDuration, studyStyle, unavailableSlots],
-  () => {
-    data.value = {
-      hoursPerDay: hoursPerDay.value,
-      breakDurationMinutes: breakDuration.value,
-      studyStyle: studyStyle.value,
-      unavailableSlots: unavailableSlots.value,
-    };
-    isComplete.value = true;
-  },
-  { deep: true, immediate: true },
-);
 </script>

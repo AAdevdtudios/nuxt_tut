@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useAuthStore } from "~/stores/auth";
-import LogoutBtn from "~/components/Utils/LogoutBtn.vue";
+import type { DropdownMenuItem } from "@nuxt/ui";
 
 const auth = useAuthStore();
 
 const displayName = computed(() => {
-  const value = auth.currentUser?.displayName?.trim();
-  return value || "Profile";
+  const value =
+    auth.currentUser?.name?.trim() || auth.currentUser?.displayName?.trim();
+  return value || "User";
 });
 
 const avatarText = computed(() => {
@@ -19,28 +20,82 @@ const avatarText = computed(() => {
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
 });
+
+const userMenuItems = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: "Settings",
+      icon: "i-lucide-settings",
+      to: "/dashboard/settings",
+    },
+    {
+      label: "Help",
+      icon: "i-lucide-circle-help",
+      to: "/dashboard/help",
+    },
+    {
+      label: "Coming Soon",
+      icon: "i-lucide-sparkles",
+      to: "/dashboard/coming-soon",
+    },
+  ],
+]);
 </script>
 
 <template>
   <UDashboardNavbar>
     <template #leading>
-      <UDashboardSidebarCollapse />
-    </template>
-
-    <template #trailing>
-      <h1 class="text-xl font-semibold text-card-foreground">Dashboard</h1>
+      <NuxtLink to="/dashboard" class="flex min-w-0 items-center gap-3">
+        <div
+          class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--ga-border)] bg-white shadow-sm"
+        >
+          <img src="/GapAiLogo.png" alt="GapAI" class="h-9 w-9 object-contain" />
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h1 class="ga-heading truncate font-serif text-xl font-semibold leading-none">
+              GapAI
+            </h1>
+            <UBadge
+              color="primary"
+              variant="soft"
+              size="sm"
+              class="rounded-full text-[9px] font-bold uppercase tracking-[0.18em]"
+            >
+              Beta
+            </UBadge>
+          </div>
+          <p
+            class="ga-subtle mt-1 truncate text-[9px] font-bold uppercase tracking-[0.22em]"
+          >
+            Active learning workspace
+          </p>
+        </div>
+      </NuxtLink>
     </template>
 
     <template #right>
-      <UColorModeButton />
-      <LogoutBtn withIcon size="md" />
-      <ULink
-        to="/dashboard/settings"
-        class="flex items-center gap-3 rounded-full px-1 py-1 text-sm text-card-foreground transition-colors hover:bg-muted"
+      <UButton
+        to="/dashboard/feedback"
+        icon="i-lucide-message-square-heart"
+        color="neutral"
+        variant="ghost"
+        class="rounded-xl"
+        aria-label="Send feedback"
       >
-        <UAvatar :text="avatarText" size="md" :alt="displayName" />
-        <span class="hidden font-medium md:inline">{{ displayName }}</span>
-      </ULink>
+        <span class="hidden sm:inline">Feedback</span>
+      </UButton>
+      <UColorModeButton />
+      <UDropdownMenu :items="userMenuItems" :content="{ align: 'end' }">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          class="rounded-full p-1"
+          :aria-label="`Open ${displayName} menu`"
+        >
+          <UAvatar :text="avatarText || 'U'" size="md" :alt="displayName" />
+        </UButton>
+      </UDropdownMenu>
     </template>
   </UDashboardNavbar>
 </template>

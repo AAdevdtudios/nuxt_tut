@@ -12,6 +12,7 @@ import {
   toBackendLibraryType,
 } from "../../utils/library";
 import type { LibrarySingleResponse } from "~/types/library.types";
+import { formatValidationError } from "../../utils/validation";
 
 function createMultipartPayload(
   form: Awaited<ReturnType<typeof readMultipartFormData>>,
@@ -155,9 +156,7 @@ export default defineEventHandler(async (event) => {
     return normalizeLibrarySingleResponse(response) as LibrarySingleResponse;
   } catch (error: any) {
     if (error.name === "ZodError") {
-      const fieldErrors = error.errors
-        .map((err: any) => `${err.path.join(".")} - ${err.message}`)
-        .join(", ");
+      const fieldErrors = formatValidationError(error);
       throw createError({
         statusCode: 400,
         statusMessage: `Validation failed: ${fieldErrors}`,

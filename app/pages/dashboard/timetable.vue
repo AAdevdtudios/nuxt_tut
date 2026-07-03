@@ -140,7 +140,9 @@
                     <template v-if="cell.day">
                       <div class="flex items-start justify-between gap-2">
                         <div>
-                          <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                          <p
+                            class="text-xs uppercase tracking-[0.16em] text-muted-foreground"
+                          >
                             {{ cell.day.day }}
                           </p>
                           <p class="mt-1 text-lg font-semibold">
@@ -219,7 +221,9 @@
                   <div class="relative pb-4">
                     <div
                       class="absolute bottom-0 left-[0.7rem] top-0 w-px bg-border"
-                      :class="{ 'opacity-0': isLastBlock(selectedDay.blocks, block) }"
+                      :class="{
+                        'opacity-0': isLastBlock(selectedDay.blocks, block),
+                      }"
                     />
                     <div
                       class="relative rounded-2xl border px-4 py-4 shadow-sm"
@@ -241,7 +245,11 @@
                             {{ block.type }}
                           </p>
                           <p class="mt-3 text-sm text-muted-foreground">
-                            {{ block.subject ? "Focus on this subject during the time block shown." : "Use this slot to rest and reset before the next study session." }}
+                            {{
+                              block.subject
+                                ? "Focus on this subject during the time block shown."
+                                : "Use this slot to rest and reset before the next study session."
+                            }}
                           </p>
                         </div>
                         <div
@@ -308,7 +316,7 @@ import type {
   TimetableDaySchedule,
 } from "~/types/timetable.types";
 
-definePageMeta({ layout: "dashboard" });
+definePageMeta({ layout: "newdash" });
 
 const { generatedTimetable } = useTimetableGenerator();
 const selectedDate = ref<string | null>(null);
@@ -346,9 +354,7 @@ const allBlocks = computed(
 const distinctSubjects = computed(
   () =>
     [
-      ...new Set(
-        allBlocks.value.map((block) => block.subject).filter(Boolean),
-      ),
+      ...new Set(allBlocks.value.map((block) => block.subject).filter(Boolean)),
     ] as string[],
 );
 
@@ -387,17 +393,20 @@ const availableMonths = computed(() => {
 });
 
 const currentMonthIndex = computed(() =>
-  availableMonths.value.findIndex((month) => month.key === currentMonthKey.value),
+  availableMonths.value.findIndex(
+    (month) => month.key === currentMonthKey.value,
+  ),
 );
 
 const currentMonthDays = computed(() => {
   const schedule = generatedTimetable.value?.schedule ?? [];
+  const monthKey = currentMonthKey.value;
 
-  if (!currentMonthKey.value) {
+  if (!monthKey) {
     return schedule;
   }
 
-  return schedule.filter((day) => day.date.startsWith(currentMonthKey.value));
+  return schedule.filter((day) => day.date.startsWith(monthKey));
 });
 
 const selectedDay = computed(() => {
@@ -413,9 +422,11 @@ const calendarRangeLabel = computed(() => {
   const schedule = generatedTimetable.value?.schedule ?? [];
   if (schedule.length === 0) return "No schedule";
 
-  return `${formatDayLabel(schedule[0].date)} - ${formatDayLabel(
-    schedule[schedule.length - 1].date,
-  )}`;
+  const first = schedule[0];
+  const last = schedule[schedule.length - 1];
+  if (!first || !last) return "No schedule";
+
+  return `${formatDayLabel(first.date)} - ${formatDayLabel(last.date)}`;
 });
 
 const activeMonthLabel = computed(() => {
@@ -427,7 +438,10 @@ const calendarWeeks = computed(() => {
   const schedule = currentMonthDays.value;
   if (schedule.length === 0) return [];
 
-  const firstDate = new Date(`${schedule[0].date}T00:00:00`);
+  const firstDay = schedule[0];
+  if (!firstDay) return [];
+
+  const firstDate = new Date(`${firstDay.date}T00:00:00`);
   const leadingBlanks = (firstDate.getDay() + 6) % 7;
 
   const cells: Array<{
@@ -466,28 +480,27 @@ watch(
 
     if (
       !currentMonthKey.value ||
-      !availableMonths.value.some((month) => month.key === currentMonthKey.value)
+      !availableMonths.value.some(
+        (month) => month.key === currentMonthKey.value,
+      )
     ) {
       currentMonthKey.value = availableMonths.value[0]?.key ?? null;
     }
 
     if (!selectedDate.value || !scheduleMap.value.has(selectedDate.value)) {
-      selectedDate.value = schedule[0].date;
+      selectedDate.value = schedule[0]?.date ?? null;
     }
   },
   { immediate: true },
 );
 
-watch(
-  currentMonthKey,
-  (monthKey) => {
-    if (!monthKey) return;
+watch(currentMonthKey, (monthKey) => {
+  if (!monthKey) return;
 
-    if (!selectedDate.value?.startsWith(monthKey)) {
-      selectedDate.value = currentMonthDays.value[0]?.date ?? selectedDate.value;
-    }
-  },
-);
+  if (!selectedDate.value?.startsWith(monthKey)) {
+    selectedDate.value = currentMonthDays.value[0]?.date ?? selectedDate.value;
+  }
+});
 
 const selectDay = (day: TimetableDaySchedule | null) => {
   if (!day) return;
@@ -496,12 +509,14 @@ const selectDay = (day: TimetableDaySchedule | null) => {
 
 const goToPreviousMonth = () => {
   if (currentMonthIndex.value <= 0) return;
-  currentMonthKey.value = availableMonths.value[currentMonthIndex.value - 1]?.key ?? null;
+  currentMonthKey.value =
+    availableMonths.value[currentMonthIndex.value - 1]?.key ?? null;
 };
 
 const goToNextMonth = () => {
   if (currentMonthIndex.value >= availableMonths.value.length - 1) return;
-  currentMonthKey.value = availableMonths.value[currentMonthIndex.value + 1]?.key ?? null;
+  currentMonthKey.value =
+    availableMonths.value[currentMonthIndex.value + 1]?.key ?? null;
 };
 
 const formatDayLabel = (value?: string) => {
@@ -554,9 +569,7 @@ const getBlockDotClasses = (type: string) =>
   type === "break" ? "bg-amber-500" : "bg-primary";
 
 const getBlockLabelClasses = (type: string) =>
-  type === "break"
-    ? "text-amber-700 dark:text-amber-300"
-    : "text-primary";
+  type === "break" ? "text-amber-700 dark:text-amber-300" : "text-primary";
 
 const getPreviewClasses = (type: string) =>
   type === "break"
@@ -566,7 +579,7 @@ const getPreviewClasses = (type: string) =>
 const toIcsDateTime = (date: string, time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part || 0));
   const dateObj = new Date(`${date}T00:00:00`);
-  dateObj.setHours(hours, minutes, 0, 0);
+  dateObj.setHours(hours ?? 0, minutes ?? 0, 0, 0);
 
   const pad = (value: number) => String(value).padStart(2, "0");
   const year = dateObj.getFullYear();
@@ -639,11 +652,15 @@ const downloadIcs = () => {
 const openSelectedDayInGoogleCalendar = () => {
   if (!selectedDay.value) return;
 
-  const blocks = selectedDay.value.blocks.filter((block) => block.type !== "break");
+  const blocks = selectedDay.value.blocks.filter(
+    (block) => block.type !== "break",
+  );
   if (!blocks.length) return;
 
   const first = blocks[0];
   const last = blocks[blocks.length - 1];
+  if (!first || !last) return;
+
   const dates = `${toIcsDateTime(selectedDay.value.date, first.start)}/${toIcsDateTime(
     selectedDay.value.date,
     last.end,

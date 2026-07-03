@@ -6,6 +6,7 @@ import {
   normalizeProjectSingleResponse,
   toProjectIconEnum,
 } from "../../utils/project";
+import { formatValidationError } from "../../utils/validation";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -54,12 +55,7 @@ export default defineEventHandler(async (event) => {
     return normalizeProjectSingleResponse(response) as ProjectSingleResponse;
   } catch (error: any) {
     if (error instanceof Error && error.name === "ZodError") {
-      const zodError = error as any;
-      const fieldErrors = (zodError.errors || [])
-        .map(
-          (err: any) => `${err.path?.join(".") || "unknown"} - ${err.message}`,
-        )
-        .join(", ");
+      const fieldErrors = formatValidationError(error);
       throw createError({
         statusCode: 400,
         statusMessage: `Validation failed: ${fieldErrors}`,
@@ -67,11 +63,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (Array.isArray(error)) {
-      const fieldErrors = error
-        .map(
-          (err: any) => `${err.path?.join(".") || "unknown"} - ${err.message}`,
-        )
-        .join(", ");
+      const fieldErrors = formatValidationError({ errors: error });
       throw createError({
         statusCode: 400,
         statusMessage: `Validation failed: ${fieldErrors}`,

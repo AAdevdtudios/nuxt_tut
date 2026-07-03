@@ -210,7 +210,7 @@ export class ProjectService {
       ec4899: "bg-rose-500",
       "14b8a6": "bg-teal-500",
     };
-    return colorMap[colorHex] || "bg-gray-500";
+    return colorMap[colorHex] || "bg-stone-500";
   }
 
   /**

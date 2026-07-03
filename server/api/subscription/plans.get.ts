@@ -7,6 +7,7 @@ import { useApi } from "../../utils/api";
 type BackendSubscriptionPlan = {
   code: string;
   name: string;
+  // Backend currently exposes this legacy field name, but the value is pence.
   priceUsdCents: number;
   monthlyQuestionLimit: number;
   monthlyEssayLimit: number;
@@ -106,7 +107,7 @@ export default defineEventHandler(async (event) => {
     name: plan.name,
     description: planDescription(plan.code),
     price: Number((plan.priceUsdCents / 100).toFixed(2)),
-    currency: "USD",
+    currency: "GBP",
     billingCycle: "monthly",
     features: buildPlanFeatures(plan),
     popular: planPopularity(plan.code),

@@ -6,6 +6,7 @@ import {
   normalizeLibrariesResponse,
   toBackendLibraryType,
 } from "../utils/library";
+import { formatValidationError } from "../utils/validation";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -39,9 +40,7 @@ export default defineEventHandler(async (event) => {
     return normalizeLibrariesResponse(response) as LibrariesResponse;
   } catch (error: any) {
     if (error.name === "ZodError") {
-      const fieldErrors = error.errors
-        .map((err: any) => `${err.path.join(".")} - ${err.message}`)
-        .join(", ");
+      const fieldErrors = formatValidationError(error);
       throw createError({
         statusCode: 400,
         statusMessage: `Validation failed: ${fieldErrors}`,

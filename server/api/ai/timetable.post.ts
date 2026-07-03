@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from "h3";
 import { z } from "zod";
 import { useApi } from "../../utils/api";
+import { formatValidationError } from "../../utils/validation";
 
 const TimetableRequestSchema = z.object({
   subjects: z
@@ -13,7 +14,7 @@ const TimetableRequestSchema = z.object({
     .min(1),
   studyHoursPerDay: z.number().int().min(1).max(24),
   breakMinutes: z.number().int().min(0).max(180),
-  studyStyle: z.enum(["intensive", "balanced", "light"]),
+  studyStyle: z.enum(["distributed", "cram", "balanced"]),
   unavailableSlots: z.array(
     z.object({
       day: z.enum(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]),
@@ -44,9 +45,7 @@ export default defineEventHandler(async (event) => {
     });
   } catch (error: any) {
     if (error?.name === "ZodError") {
-      const fieldErrors = error.errors
-        .map((issue: any) => `${issue.path.join(".")}: ${issue.message}`)
-        .join(", ");
+      const fieldErrors = formatValidationError(error);
 
       throw createError({
         statusCode: 400,

@@ -11,8 +11,19 @@ const rawEnv = {
     REFRESH: process.env.API_REFRESH_ENDPOINT || "/api/auth/refresh",
     ME: process.env.API_ME_ENDPOINT || "/api/auth/me",
     LOGOUT: process.env.API_LOGOUT_ENDPOINT || "/api/auth/logout",
+    FORGOT_PASSWORD:
+      process.env.API_FORGOT_PASSWORD_ENDPOINT || "/api/auth/password/forgot",
+    RESET_PASSWORD:
+      process.env.API_RESET_PASSWORD_ENDPOINT || "/api/auth/password/reset",
     UPDATE_PROFILE_NAME:
       process.env.API_UPDATE_PROFILE_NAME_ENDPOINT || "/api/auth/profile/name",
+    UPDATE_PROFILE_USERNAME:
+      process.env.API_UPDATE_PROFILE_USERNAME_ENDPOINT ||
+      "/api/auth/profile/username",
+    DELETE_ACCOUNT:
+      process.env.API_DELETE_ACCOUNT_ENDPOINT || "/api/auth/account",
+    RECOVER_ACCOUNT:
+      process.env.API_RECOVER_ACCOUNT_ENDPOINT || "/api/auth/account/recover",
   },
   SERVER_API_ENDPOINTS: {
     LOGIN: "/api/auth/login",
@@ -20,7 +31,12 @@ const rawEnv = {
     REFRESH: "/api/auth/refresh",
     ME: "/api/auth/me",
     LOGOUT: "/api/auth/logout",
+    FORGOT_PASSWORD: "/api/auth/password/forgot",
+    RESET_PASSWORD: "/api/auth/password/reset",
     UPDATE_PROFILE_NAME: "/api/auth/profile/name",
+    UPDATE_PROFILE_USERNAME: "/api/auth/profile/username",
+    DELETE_ACCOUNT: "/api/auth/account",
+    RECOVER_ACCOUNT: "/api/auth/account/recover",
   },
 };
 

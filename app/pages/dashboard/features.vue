@@ -73,7 +73,7 @@
                   <th v-for="plan in plans" :key="plan.id" class="plan-column">
                     <div class="plan-header">
                       <span class="plan-name">{{ plan.name }}</span>
-                      <span class="plan-price">${{ plan.price }}/mo</span>
+                      <span class="plan-price">£{{ plan.price }}/mo</span>
                     </div>
                   </th>
                 </tr>

@@ -249,7 +249,7 @@ export function useLibraryValidation() {
     errors.value = [];
     Object.entries(fieldErrors).forEach(([field, messages]) => {
       if (messages && messages.length > 0) {
-        errors.value.push({ field, message: messages[0] });
+        errors.value.push({ field, message: messages[0] || "Invalid value" });
       }
     });
   };

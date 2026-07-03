@@ -23,7 +23,6 @@ export default defineNuxtConfig({
     "pinia-plugin-persistedstate",
     "@nuxtjs/color-mode",
     "dragon-editor",
-    "nuxt-lottie",
     "@nuxtjs/i18n",
     "@nuxtjs/device",
     "nuxt-tiptap-editor",
@@ -31,6 +30,15 @@ export default defineNuxtConfig({
   ],
   tiptap: {
     prefix: "Tiptap", //prefix for Tiptap imports, composables not included
+  },
+  i18n: {
+    defaultLocale: "en",
+    strategy: "no_prefix",
+    locales: [
+      { code: "en", name: "English" },
+      { code: "fr", name: "French" },
+      { code: "es", name: "Spanish" },
+    ],
   },
   runtimeConfig: {
     API_TOKEN_KEY: process.env.API_TOKEN_KEY,
@@ -41,18 +49,20 @@ export default defineNuxtConfig({
   //     crawlLinks: false,
   //   },
   // },
-  lottie: {
-    componentName: "Lottie", // Optional: Customize the component name
-    lottieFolder: "/assets/lottie", // Optional: Customize the Lottie folder path
-    autoFolderCreation: true, // Optional: Auto create lottie folder (default: true)
-    enableLogs: true, // Optional: Enable console logs from module (default: true)
-  },
   css: ["~/assets/css/main.css"],
   vite: {
     resolve: {
       alias: {
         "~": path.resolve(__dirname, "app"),
       },
+    },
+    optimizeDeps: {
+      include: [
+        "@tiptap/extension-table",
+        "@tiptap/extension-color",
+        "@tiptap/extension-text-style",
+        "zod",
+      ],
     },
     plugins: [tailwindcss()],
   },

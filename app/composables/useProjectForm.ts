@@ -30,6 +30,7 @@ export interface UseProjectFormReturn {
   resetForm: () => void;
   hasFieldError: (field: string) => boolean;
   getFieldError: (field: string) => string | undefined;
+  setFieldErrorsFromApi: (fieldErrors: Record<string, string[]>) => void;
 }
 
 const defaultFormData: ProjectFormData = {
@@ -143,7 +144,7 @@ export function useProjectForm(): UseProjectFormReturn {
     errors.value = [];
     Object.entries(fieldErrors).forEach(([field, messages]) => {
       if (messages && messages.length > 0) {
-        errors.value.push({ field, message: messages[0] });
+        errors.value.push({ field, message: messages[0] || "Invalid value" });
       }
     });
   };

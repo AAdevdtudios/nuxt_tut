@@ -94,7 +94,7 @@ export function useLibraryRelationships(libraryId: string | number) {
    */
   const projectsWithLibrary = computed(() => {
     const projects = projectStore.allProjects;
-    return projects.filter((p) => p.libraryIds.includes(libraryId));
+    return projects.filter((p) => p.libraryIds.includes(String(libraryId)));
   });
 
   return {

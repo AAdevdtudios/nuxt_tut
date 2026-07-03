@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from "h3";
 import { z } from "zod";
 import { useApi } from "../utils/api";
+import { formatValidationError } from "../utils/validation";
 
 const FeedbackCreateSchema = z.object({
   category: z.enum([
@@ -26,9 +27,7 @@ export default defineEventHandler(async (event) => {
     });
   } catch (error: any) {
     if (error?.name === "ZodError") {
-      const fieldErrors = error.errors
-        .map((issue: any) => `${issue.path.join(".")}: ${issue.message}`)
-        .join(", ");
+      const fieldErrors = formatValidationError(error);
 
       throw createError({
         statusCode: 400,

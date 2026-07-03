@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
     body: {
       email: body?.email,
       password: body?.password,
+      name: body?.name,
       displayName: body?.displayName,
     },
     useJwt: false,

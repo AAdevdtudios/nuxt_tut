@@ -5,6 +5,7 @@
   >
     <template #actions>
       <ProjectAddBtn
+        ref="projectAddBtnRef"
         :model-value="isCreating"
         @update:modelValue="isCreating = $event"
         @create-project="handleCreateProject"
@@ -108,7 +109,7 @@
                       ? 'bg-blue-500/20 text-blue-700'
                       : project.status === 'overdue'
                         ? 'bg-red-500/20 text-red-700'
-                        : 'bg-gray-500/20 text-gray-700',
+                        : 'bg-[var(--ga-warm-soft)] text-[var(--ga-warm)]',
                 ]"
               >
                 {{ project.status }}
@@ -174,13 +175,16 @@ import { useStoreInitializer } from "~/composables/useStoreInitializer";
 import { ProjectService } from "~/services/projectService";
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
 });
 
 // Pinia stores
 const projectStore = useProjectStore();
 const projectService = new ProjectService();
 const isCreating = ref(false);
+const projectAddBtnRef = ref<{
+  setFieldErrorsFromApi: (fieldErrors: Record<string, string[]>) => void;
+} | null>(null);
 
 // Store initializer for smart data fetching
 const { initialize } = useStoreInitializer();
@@ -228,7 +232,7 @@ const handleCreateProject = async (projectData: any) => {
     const fieldErrors = error?.data?.fieldErrors;
     if (fieldErrors && Object.keys(fieldErrors).length > 0) {
       // Set field errors on form for display below each field
-      form.setFieldErrorsFromApi(fieldErrors);
+      projectAddBtnRef.value?.setFieldErrorsFromApi(fieldErrors);
       notify("Please check the highlighted fields", "error");
     } else {
       // Fallback to generic error message

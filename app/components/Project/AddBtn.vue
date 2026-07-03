@@ -187,6 +187,10 @@ function closeModal() {
   emit("update:modelValue", false);
 }
 
+defineExpose({
+  setFieldErrorsFromApi: form.setFieldErrorsFromApi,
+});
+
 watch(
   () => props.modelValue,
   (open) => {

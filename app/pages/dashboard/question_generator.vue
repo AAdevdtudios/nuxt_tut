@@ -351,6 +351,7 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: "dashboard" });
+await navigateTo("/dashboard/quick-practice", { replace: true });
 
 interface GeneratedQuestion {
   id: string;

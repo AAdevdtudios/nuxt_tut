@@ -1,5 +1,7 @@
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+import { deleteCookie, getRequestURL, sendRedirect } from "h3";
+
 type ApiRequestOptions<T, R> = {
   method?: ApiMethod;
   body?: any;
@@ -15,15 +17,51 @@ type ApiMutationOptions<T, R> = {
   onError?: (error: any) => any;
 };
 
+const SERVER_API_TIMEOUT_MS = 15_000;
+const SERVER_AI_API_TIMEOUT_MS = 60_000;
+const NETWORK_ERROR_MESSAGE =
+  "Service is temporarily unavailable. Please try again shortly.";
+
+const isAiApiUrl = (url: string) =>
+  /^\/api\/notes\/[^/]+\/chat(?:\/|$)/.test(url) ||
+  /^\/api\/sources\/[^/]+\/chat(?:\/|$)/.test(url) ||
+  /^\/api\/notes\/[^/]+\/actions(?:\/|$)/.test(url) ||
+  /^\/api\/notes\/[^/]+\/study-guide(?:\/|$)/.test(url) ||
+  /^\/api\/sources\/[^/]+\/study-guide(?:\/|$)/.test(url) ||
+  /^\/api\/notes\/ai(?:\/|$)/.test(url) ||
+  /^\/api\/projects\/[^/]+\/adaptive\/chat(?:\/|$)/.test(url) ||
+  /^\/api\/study-sessions(?:\/|$)/.test(url);
+
 export default defineNuxtPlugin(() => {
   const nuxtApp = useNuxtApp();
   const forwardedHeaders = useRequestHeaders(["cookie", "authorization"]);
 
-  const stripEndpointNoise = (message: string) =>
-    message
+  const stripEndpointNoise = (message: string) => {
+    const cleaned = message
       .replace(/^\[[A-Z]+\]\s+"[^"]+":\s*\d+\s*/i, "")
+      .replace(/\[[A-Z]+\]\s+"https?:\/\/[^"]+":\s*<no response>\s*/gi, "")
+      .replace(/\[[A-Z]+\]\s+"\/api\/[^"]+":\s*<no response>\s*/gi, "")
+      .replace(/https?:\/\/[^\s"'<>]+/gi, "")
       .replace(/^One or more errors occurred![:\s]*/i, "")
       .trim();
+
+    const lowered = cleaned.toLowerCase();
+    if (
+      lowered === "fetch failed" ||
+      lowered.includes("<no response>") ||
+      lowered.includes("networkerror") ||
+      lowered.includes("network error") ||
+      lowered.includes("econnrefused") ||
+      lowered.includes("socket hang up") ||
+      lowered.includes("connect timeout") ||
+      lowered.includes("request timed out") ||
+      lowered.includes("timeout")
+    ) {
+      return NETWORK_ERROR_MESSAGE;
+    }
+
+    return cleaned;
+  };
 
   const flattenErrorDetails = (errors: any): string[] => {
     if (!errors || typeof errors !== "object") return [];
@@ -41,28 +79,73 @@ export default defineNuxtPlugin(() => {
     });
   };
 
-  const normalizeErrorMessage = (error: any) => {
+  const normalizeErrorMessage = (error: any, url?: string) => {
     const fallback = "Request failed. Please try again.";
     const data = error?.data || error?.response?._data;
     const code = String(data?.code || "").toLowerCase();
     const errorLabel = String(data?.error || "").toLowerCase();
     const statusCode = Number(
-      error?.response?.status || error?.statusCode || error?.status || data?.statusCode || 0,
+      error?.response?.status ||
+        error?.statusCode ||
+        error?.status ||
+        data?.statusCode ||
+        0,
     );
-    const messages: string[] = [];
+    const messages = new Set<string>();
 
-    if (statusCode === 401 || code === "unauthorized" || errorLabel === "unauthorized") {
+    const rawNetworkMessage = [
+      error?.message,
+      error?.statusMessage,
+      error?.cause?.message,
+      data?.message,
+      data?.statusMessage,
+      data?.error,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (
+      statusCode === 0 &&
+      (rawNetworkMessage.includes("fetch failed") ||
+        rawNetworkMessage.includes("<no response>") ||
+        rawNetworkMessage.includes("networkerror") ||
+        rawNetworkMessage.includes("network error") ||
+        rawNetworkMessage.includes("econnrefused") ||
+        rawNetworkMessage.includes("socket hang up") ||
+        rawNetworkMessage.includes("connect timeout") ||
+        rawNetworkMessage.includes("request timed out") ||
+        rawNetworkMessage.includes("timeout"))
+    ) {
+      return NETWORK_ERROR_MESSAGE;
+    }
+
+    if (
+      statusCode === 401 ||
+      code === "unauthorized" ||
+      errorLabel === "unauthorized"
+    ) {
+      if (url === "/api/auth/login") {
+        return "Incorrect credentials. Please check your email and password.";
+      }
       return "Unauthorized. Please log in again.";
     }
 
-    if (statusCode === 403 || code === "forbidden" || errorLabel === "forbidden") {
+    if (
+      statusCode === 403 ||
+      code === "forbidden" ||
+      errorLabel === "forbidden"
+    ) {
       const explicit =
         typeof data?.error === "string"
           ? data.error
           : typeof data?.message === "string"
             ? data.message
             : "";
-      return stripEndpointNoise(explicit) || "You do not have permission for this action.";
+      return (
+        stripEndpointNoise(explicit) ||
+        "You do not have permission for this action."
+      );
     }
 
     if (statusCode === 404 || code === "notfound") {
@@ -72,24 +155,27 @@ export default defineNuxtPlugin(() => {
           : typeof data?.message === "string"
             ? data.message
             : "";
-      return stripEndpointNoise(explicit) || "The requested resource was not found.";
+      return (
+        stripEndpointNoise(explicit) || "The requested resource was not found."
+      );
     }
 
     if (typeof data?.message === "string") {
-      messages.push(stripEndpointNoise(data.message));
+      messages.add(stripEndpointNoise(data.message));
     }
 
-    messages.push(...flattenErrorDetails(data?.errors));
+    flattenErrorDetails(data?.errors).forEach((value) => messages.add(value));
 
     if (typeof error?.statusMessage === "string") {
-      messages.push(stripEndpointNoise(error.statusMessage));
+      messages.add(stripEndpointNoise(error.statusMessage));
     }
 
     if (typeof error?.message === "string") {
-      messages.push(stripEndpointNoise(error.message));
+      messages.add(stripEndpointNoise(error.message));
     }
 
-    const merged = messages.filter(Boolean).join(" ").trim() || fallback;
+    const merged =
+      Array.from(messages).filter(Boolean).join(" ").trim() || fallback;
     const lowered = merged.toLowerCase();
 
     if (
@@ -116,11 +202,11 @@ export default defineNuxtPlugin(() => {
       return "Your current plan limit has been exceeded.";
     }
 
-    return merged;
+    return stripEndpointNoise(merged) || fallback;
   };
 
-  const withNormalizedMessage = (error: any) => {
-    const message = normalizeErrorMessage(error);
+  const withNormalizedMessage = (error: any, url?: string) => {
+    const message = normalizeErrorMessage(error, url);
     const normalized = new Error(message) as any;
     normalized.cause = error;
     normalized.data = error?.data || error?.response?._data;
@@ -130,20 +216,69 @@ export default defineNuxtPlugin(() => {
     return normalized;
   };
 
-  const isUnauthorizedError = (error: any) =>
-    error?.response?.status === 401 ||
-    error?.statusCode === 401 ||
-    error?.status === 401 ||
-    error?.statusMessage === "Unauthorized" ||
-    error?.data?.statusMessage === "Unauthorized" ||
-    error?.message === "Unauthorized";
-
-  const redirectToLogin = async () =>
-    await nuxtApp.runWithContext(() =>
-      navigateTo("/", {
-        redirectCode: 302,
-      }),
+  const getErrorStatusCode = (error: any) => {
+    const status = Number(
+      error?.response?.status ??
+        error?.response?.statusCode ??
+        error?.statusCode ??
+        error?.status ??
+        error?.data?.statusCode ??
+        error?.data?.status ??
+        error?.response?._data?.statusCode ??
+        0,
     );
+
+    return Number.isFinite(status) ? status : 0;
+  };
+
+  const isUnauthorizedError = (error: any) => {
+    const status = getErrorStatusCode(error);
+    if (status === 401) return true;
+
+    const statusMessage = String(
+      error?.statusMessage ??
+        error?.data?.statusMessage ??
+        error?.response?.statusText ??
+        "",
+    ).toLowerCase();
+
+    const message = String(error?.message ?? "").toLowerCase();
+
+    return (
+      statusMessage.includes("unauthorized") ||
+      message === "unauthorized" ||
+      message.includes("unauthorized")
+    );
+  };
+
+  const redirectToLogin = async () => {
+    // Prefer an H3 redirect during SSR to avoid calling router composables in a non-router context.
+    const event = nuxtApp.ssrContext?.event;
+    if (event) {
+      const url = getRequestURL(event);
+      const redirect = `${url.pathname || "/"}${url.search || ""}`;
+
+      // Clear both auth cookies (httpOnly) and the persisted pinia cookie ("auth") to avoid redirect loops.
+      deleteCookie(event, "access_token", { path: "/" });
+      deleteCookie(event, "refresh_token", { path: "/" });
+      deleteCookie(event, "auth", { path: "/" });
+
+      sendRedirect(event, `/?redirect=${encodeURIComponent(redirect)}`, 302);
+      return;
+    }
+
+    // Fallback (should be rare): router-based redirect.
+    await nuxtApp.runWithContext(() => {
+      const url = useRequestURL();
+      const redirect = `${url.pathname || "/"}${url.search || ""}`;
+      return navigateTo(
+        { path: "/", query: { redirect } },
+        { redirectCode: 302 },
+      );
+    });
+  };
+
+  let didRedirectToLogin = false;
 
   const request = async <T, R = T>(
     url: string,
@@ -156,6 +291,7 @@ export default defineNuxtPlugin(() => {
         query?: Record<string, any>;
         headers: HeadersInit;
         body?: any;
+        timeout: number;
       } = {
         method: options.method || "GET",
         query: options.query,
@@ -163,6 +299,9 @@ export default defineNuxtPlugin(() => {
           ...forwardedHeaders,
           ...(options.headers || {}),
         },
+        timeout: isAiApiUrl(url)
+          ? SERVER_AI_API_TIMEOUT_MS
+          : SERVER_API_TIMEOUT_MS,
       };
 
       if (hasBody) {
@@ -171,16 +310,19 @@ export default defineNuxtPlugin(() => {
 
       const result = (await $fetch(url, fetchOptions)) as T;
 
-      return options.transform ? options.transform(result) : (result as unknown as R);
+      return options.transform
+        ? options.transform(result)
+        : (result as unknown as R);
     } catch (error: any) {
-      if (
-        !url.startsWith("/api/auth/") &&
-        isUnauthorizedError(error)
-      ) {
-        await redirectToLogin();
+      if (!url.startsWith("/api/auth/") && isUnauthorizedError(error)) {
+        if (!didRedirectToLogin) {
+          didRedirectToLogin = true;
+          await redirectToLogin();
+        }
+        return undefined as unknown as R;
       }
 
-      const normalizedError = withNormalizedMessage(error);
+      const normalizedError = withNormalizedMessage(error, url);
 
       if (options.onError) {
         throw options.onError(normalizedError);
@@ -216,7 +358,10 @@ export default defineNuxtPlugin(() => {
     );
   };
 
-  const useMutation = <T, R = T>(url: string, options: ApiMutationOptions<T, R>) => {
+  const useMutation = <T, R = T>(
+    url: string,
+    options: ApiMutationOptions<T, R>,
+  ) => {
     const pending = ref(false);
     const error = ref<any>(null);
     const data = ref<R | null>(null);

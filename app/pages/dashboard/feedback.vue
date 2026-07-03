@@ -12,7 +12,7 @@ import type {
 } from "~/types/feedback.types";
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
 });
 
 const toast = useToast();

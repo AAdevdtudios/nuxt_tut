@@ -5,18 +5,19 @@
   >
     <div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-2">
       <UCard
+        class="ga-surface border shadow-sm"
         :ui="{
-          header: 'border-b border-default',
+          header: 'border-b border-[var(--ga-border)]',
         }"
       >
         <template #header>
           <div class="flex items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+              class="ga-icon-box flex h-10 w-10 items-center justify-center rounded-xl"
             >
               <UIcon name="i-lucide-user" class="h-5 w-5" />
             </div>
-            <h3 class="text-lg font-semibold text-card-foreground">
+            <h3 class="ga-heading text-lg font-semibold">
               Profile Information
             </h3>
           </div>
@@ -31,8 +32,7 @@
             </UFormField>
             <UFormField label="Username">
               <UInput
-                :model-value="settings.username"
-                disabled
+                v-model="settings.username"
                 class="w-full"
               />
             </UFormField>
@@ -52,35 +52,36 @@
               variant="ghost"
               color="error"
               label="Delete Account"
-              disabled
+              @click="isDeleteAccountModalOpen = true"
             />
           </div>
         </template>
       </UCard>
 
       <UCard
+        class="ga-surface border shadow-sm"
         :ui="{
-          header: 'border-b border-default',
+          header: 'border-b border-[var(--ga-border)]',
         }"
       >
         <template #header>
           <div class="flex items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+              class="ga-icon-box flex h-10 w-10 items-center justify-center rounded-xl"
             >
               <UIcon name="i-lucide-credit-card" class="h-5 w-5" />
             </div>
-            <h3 class="text-lg font-semibold text-card-foreground">
+            <h3 class="ga-heading text-lg font-semibold">
               Payment & Plan
             </h3>
           </div>
         </template>
         <div class="space-y-4">
-          <div class="rounded-xl border border-default bg-muted/30 p-4">
+          <div class="ga-surface-soft rounded-xl border p-4">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-sm text-muted-foreground">Current plan</p>
-                <h4 class="text-lg font-semibold text-card-foreground">
+                <p class="ga-muted text-sm">Current plan</p>
+                <h4 class="ga-heading text-lg font-semibold">
                   {{ subscriptionPlanName }}
                 </h4>
               </div>
@@ -88,20 +89,20 @@
                 {{ subscriptionStatus }}
               </UBadge>
             </div>
-            <p class="mt-2 text-sm text-muted-foreground">
+            <p class="ga-muted mt-2 text-sm">
               {{ subscriptionPriceLabel }}
             </p>
           </div>
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div class="rounded-lg border border-default p-4">
-              <p class="text-sm text-muted-foreground">Questions usage</p>
+            <div class="ga-surface-soft rounded-xl border p-4">
+              <p class="ga-muted text-sm">Questions usage</p>
               <p class="mt-1 text-base font-semibold">
                 {{ questionUsageLabel }}
               </p>
             </div>
-            <div class="rounded-lg border border-default p-4">
-              <p class="text-sm text-muted-foreground">Document usage</p>
+            <div class="ga-surface-soft rounded-xl border p-4">
+              <p class="ga-muted text-sm">Document usage</p>
               <p class="mt-1 text-base font-semibold">
                 {{ documentUsageLabel }}
               </p>
@@ -111,25 +112,32 @@
         <template #footer>
           <div class="flex flex-wrap justify-end gap-2">
             <UButton variant="ghost" disabled> View Payment History </UButton>
-            <UButton variant="solid" disabled> Manage Payment Methods </UButton>
+            <UButton
+              variant="solid"
+              :loading="isOpeningBillingPortal"
+              :disabled="isOpeningBillingPortal || !auth.hasSession"
+              @click="openBillingPortal"
+            >
+              Manage Payment Methods
+            </UButton>
           </div>
         </template>
       </UCard>
 
       <UCard
+        class="ga-surface col-span-1 border shadow-sm lg:col-span-2"
         :ui="{
-          header: 'border-b border-default',
+          header: 'border-b border-[var(--ga-border)]',
         }"
-        class="col-span-1 lg:col-span-2"
       >
         <template #header>
           <div class="flex items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+              class="ga-icon-box flex h-10 w-10 items-center justify-center rounded-xl"
             >
               <UIcon name="i-lucide-sliders-horizontal" class="h-5 w-5" />
             </div>
-            <h3 class="text-lg font-semibold text-card-foreground">
+            <h3 class="ga-heading text-lg font-semibold">
               System Settings
             </h3>
           </div>
@@ -172,11 +180,11 @@
             </UFormField>
           </div>
 
-          <div class="rounded-lg border border-default p-3">
+          <div class="ga-surface-soft rounded-xl border p-3">
             <div class="flex items-center justify-between gap-3">
               <div>
                 <p class="text-sm font-medium">Reduce Motion</p>
-                <p class="text-xs text-muted-foreground">
+                <p class="ga-muted text-xs">
                   Minimize non-essential animations in the dashboard.
                 </p>
               </div>
@@ -197,8 +205,47 @@
           </div>
         </template>
       </UCard>
-      <PricingPlansCard class="col-span-1 lg:col-span-2" :plans="plans" />
+      <PricingPlansCard
+        class="ga-surface col-span-1 border shadow-sm lg:col-span-2"
+        :plans="plans"
+        :current-plan-code="subscription?.planCode"
+        :loading="plansLoading"
+      />
     </div>
+
+    <UModal v-model:open="isDeleteAccountModalOpen">
+      <template #content>
+        <div class="space-y-4 p-6">
+          <div>
+            <h3 class="ga-heading text-lg font-semibold">Delete account?</h3>
+            <p class="ga-muted mt-1 text-sm">
+              This signs you out immediately. The account can only be restored
+              through account recovery.
+            </p>
+          </div>
+          <UFormField label="Type DELETE to confirm">
+            <UInput v-model="deleteAccountConfirmation" class="w-full" />
+          </UFormField>
+          <div class="flex justify-end gap-2">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              @click="isDeleteAccountModalOpen = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              color="error"
+              :loading="isDeletingAccount"
+              :disabled="deleteAccountConfirmation !== 'DELETE'"
+              @click="handleDeleteAccount"
+            >
+              Delete Account
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </DashboardBodyLayout>
 </template>
 
@@ -209,23 +256,33 @@ import { useSystemPreferencesStore } from "~/stores/systemPreferences";
 import { useSubscriptionPlans } from "~/composables/useSubscriptionPlans";
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
 });
 
 const auth = useAuthStore();
 const systemPreferences = useSystemPreferencesStore();
 const colorMode = useColorMode();
 const toast = useToast();
+const { $api } = useNuxtApp();
 
 // Fetch subscription plans
 const { plans, fetchPlans, isLoading: plansLoading } = useSubscriptionPlans();
 
 onMounted(async () => {
   await fetchPlans();
+  if (auth.hasSession) {
+    try {
+      await auth.fetchCurrentUser();
+    } catch {}
+  }
 });
 const saved = ref(false);
 const systemSaved = ref(false);
 const saving = ref(false);
+const isOpeningBillingPortal = ref(false);
+const isDeleteAccountModalOpen = ref(false);
+const isDeletingAccount = ref(false);
+const deleteAccountConfirmation = ref("");
 const settings = ref({
   name: "",
   email: "",
@@ -268,11 +325,17 @@ if (
 
 const canSave = computed(() => {
   const nextName = settings.value.name.trim();
+  const nextUsername = settings.value.username.trim();
   const currentName =
     auth.currentUser?.name?.trim() ||
     auth.currentUser?.displayName?.trim() ||
     "";
-  return nextName.length >= 3 && nextName !== currentName;
+  const currentUsername = auth.currentUser?.displayName?.trim() || "";
+  const hasValidNameChange = nextName.length >= 3 && nextName !== currentName;
+  const hasValidUsernameChange =
+    /^[A-Za-z0-9._-]{2,}$/.test(nextUsername) &&
+    nextUsername !== currentUsername;
+  return hasValidNameChange || hasValidUsernameChange;
 });
 
 const subscription = computed(() => auth.currentUser?.subscription || null);
@@ -299,7 +362,7 @@ const subscriptionPriceLabel = computed(() => {
     return "Free plan";
   }
 
-  return `Billed at $${(cents / 100).toFixed(2)}`;
+  return `Billed at £${(cents / 100).toFixed(2)}`;
 });
 
 const questionUsageLabel = computed(() => {
@@ -351,7 +414,10 @@ const syncSystemDraft = () => {
   systemDraft.value = {
     language: systemPreferences.language || "en",
     accentColor: systemPreferences.accentColor || "primary",
-    theme: (systemPreferences.theme || "system") as "system" | "light" | "dark",
+    theme: (colorMode.preference || systemPreferences.theme || "system") as
+      | "system"
+      | "light"
+      | "dark",
     density: (systemPreferences.density || "comfortable") as
       | "comfortable"
       | "compact",
@@ -371,9 +437,12 @@ const canSaveSystemPreferences = computed(
 );
 
 watch(
-  () => systemPreferences.theme,
+  () => colorMode.preference,
   (value) => {
-    colorMode.preference = value as "system" | "light" | "dark";
+    const nextTheme = (value || "system") as "system" | "light" | "dark";
+    if (systemDraft.value.theme !== nextTheme) {
+      systemDraft.value.theme = nextTheme;
+    }
   },
   { immediate: true },
 );
@@ -404,7 +473,20 @@ async function handleSave() {
 
   try {
     saving.value = true;
-    await auth.updateProfileName(settings.value.name.trim());
+    const nextName = settings.value.name.trim();
+    const nextUsername = settings.value.username.trim();
+    const currentName =
+      auth.currentUser?.name?.trim() ||
+      auth.currentUser?.displayName?.trim() ||
+      "";
+    const currentUsername = auth.currentUser?.displayName?.trim() || "";
+
+    if (nextName !== currentName) {
+      await auth.updateProfileName(nextName);
+    }
+    if (nextUsername !== currentUsername) {
+      await auth.updateProfileUsername(nextUsername);
+    }
     syncFromUser();
     saved.value = true;
     toast.add({
@@ -421,6 +503,49 @@ async function handleSave() {
     });
   } finally {
     saving.value = false;
+  }
+}
+
+async function handleDeleteAccount() {
+  if (deleteAccountConfirmation.value !== "DELETE") return;
+
+  try {
+    isDeletingAccount.value = true;
+    await auth.deleteAccount();
+    await navigateTo("/auth/login");
+  } catch (error: any) {
+    toast.add({
+      title: "Delete failed",
+      description: error?.message || "Could not delete your account.",
+      color: "error",
+    });
+  } finally {
+    isDeletingAccount.value = false;
+    isDeleteAccountModalOpen.value = false;
+    deleteAccountConfirmation.value = "";
+  }
+}
+
+async function openBillingPortal() {
+  try {
+    isOpeningBillingPortal.value = true;
+    const response = await $api.mutate<{ url?: string }>("/api/billing/portal", {
+      method: "POST",
+    });
+
+    if (!response?.url) {
+      throw new Error("Billing portal is not available right now.");
+    }
+
+    await navigateTo(response.url, { external: true });
+  } catch (error: any) {
+    toast.add({
+      title: "Billing portal unavailable",
+      description: error?.message || "Could not open billing management.",
+      color: "error",
+    });
+  } finally {
+    isOpeningBillingPortal.value = false;
   }
 }
 </script>

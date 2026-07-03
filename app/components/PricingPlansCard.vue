@@ -49,9 +49,9 @@
           :features="plan.features?.slice(0, 5).map((f) => f.name) || []"
           :button="{
             label: buttonLabel(plan),
-            color: selectedPlanId === plan.id ? 'primary' : 'neutral',
-            variant: selectedPlanId === plan.id ? 'solid' : 'soft',
-            disabled: isProcessing,
+            color: isPlanActive(plan) ? 'primary' : 'neutral',
+            variant: isPlanActive(plan) ? 'solid' : 'soft',
+            disabled: isProcessing || isPlanActive(plan),
             onClick: () => onPlanClick(plan.id),
           }"
         />
@@ -76,6 +76,7 @@ import { useCurrency } from "~/composables/useCurrency";
 
 const props = defineProps<{
   plans: PricingPlan[];
+  currentPlanCode?: string | null;
   loading?: boolean;
   loadError?: string | null;
   class?: string;
@@ -116,21 +117,31 @@ const formatPlanPrice = (baseUsd: number) => {
   return formatPrice(converted);
 };
 
+const isCurrentPlan = (plan: PricingPlan) =>
+  Boolean(props.currentPlanCode) &&
+  plan.id.toLowerCase() === String(props.currentPlanCode).toLowerCase();
+
+const isPlanActive = (plan: PricingPlan) =>
+  isCurrentPlan(plan) || selectedPlanId.value === plan.id;
+
 const buttonLabel = (plan: PricingPlan) => {
+  if (isCurrentPlan(plan)) return "Current plan";
   const selected = selectedPlanId.value === plan.id;
   if (selected) return plan.price === 0 ? "Selected" : "Continue";
   return plan.price === 0 ? "Select" : "Choose";
 };
 
 const startCheckout = async (plan: PricingPlan) => {
-  const { data, error: fetchError } = await useFetch(
+  const { data, error: fetchError } = await useFetch<{
+    url?: string;
+    checkoutUrl?: string;
+    sessionId?: string;
+  }>(
     "/api/subscription/create-checkout-session",
     {
       method: "POST",
       body: {
-        planName: plan.name,
-        priceInCents: Math.round(plan.price * 100),
-        currency: plan.currency || "USD",
+        planCode: plan.id,
       },
     },
   );
@@ -139,19 +150,22 @@ const startCheckout = async (plan: PricingPlan) => {
     throw new Error("Failed to create checkout session");
   }
 
-  if (data.value?.checkoutUrl) {
-    await navigateTo(data.value.checkoutUrl, { external: true });
+  const checkoutUrl = data.value?.url || data.value?.checkoutUrl;
+  if (checkoutUrl) {
+    await navigateTo(checkoutUrl, { external: true });
   } else if (data.value?.sessionId) {
-    await navigateTo("/billing?success=true");
+    await navigateTo("/billing?stripe=success");
   }
 };
 
 const onPlanClick = async (planId: string) => {
-  selectedPlanId.value = planId;
   paymentError.value = null;
 
   const plan = props.plans.find((p) => p.id === planId);
   if (!plan) return;
+  if (isPlanActive(plan)) return;
+
+  selectedPlanId.value = planId;
   if (plan.price === 0) return;
 
   try {

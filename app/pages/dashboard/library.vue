@@ -46,7 +46,7 @@ import { usePaginationHandlers } from "~/composables/usePaginationHandlers";
 import type { LibraryItem } from "~/types";
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
 });
 
 // Toast for notifications

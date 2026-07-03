@@ -21,6 +21,11 @@ import type {
   LibraryUpdateRequest,
 } from "~/types";
 
+type StoreApiClient = {
+  fetch: <T = unknown>(url: string, options?: any) => Promise<T>;
+  mutate: <T = unknown>(url: string, options?: any) => Promise<T>;
+};
+
 export const useLibraryStore = defineStore("libraries", () => {
   const refreshVersion = useState<number>("library-refresh-version", () => 0);
 
@@ -28,11 +33,11 @@ export const useLibraryStore = defineStore("libraries", () => {
     refreshVersion.value += 1;
   };
 
-  const getApi = () => {
+  const getApi = (): StoreApiClient => {
     const nuxtApp = useNuxtApp();
 
     if (nuxtApp.$api) {
-      return nuxtApp.$api;
+      return nuxtApp.$api as StoreApiClient;
     }
 
     return {
@@ -186,6 +191,9 @@ export const useLibraryStore = defineStore("libraries", () => {
         },
       );
 
+      // When auth expires during SSR/client navigation, `$api` may redirect and return `undefined`.
+      if (!response) return;
+
       if (!response?.data || !Array.isArray(response.data)) {
         throw new Error("Invalid response structure");
       }
@@ -226,6 +234,7 @@ export const useLibraryStore = defineStore("libraries", () => {
         },
       );
 
+      if (!response) return;
       if (!response?.data) throw new Error("Invalid response structure");
 
       librariesById.value[response.data.id] = response.data;
@@ -254,6 +263,7 @@ export const useLibraryStore = defineStore("libraries", () => {
         body: toFormData(normalizedPayload),
       });
 
+      if (!response) return;
       if (!response?.data) throw new Error("Invalid response structure");
 
       librariesById.value[response.data.id] = response.data;
@@ -289,6 +299,7 @@ export const useLibraryStore = defineStore("libraries", () => {
         },
       );
 
+      if (!response) return;
       if (!response?.data) throw new Error("Invalid response structure");
 
       librariesById.value[response.data.id] = response.data;

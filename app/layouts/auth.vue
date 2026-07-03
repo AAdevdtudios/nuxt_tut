@@ -12,7 +12,7 @@ useHead({
 
 <template>
   <div
-    class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4"
+    class="ga-app min-h-screen flex items-center justify-center px-4"
   >
     <div class="w-full max-w-4xl">
       <slot />

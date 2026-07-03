@@ -21,6 +21,22 @@ const emit = defineEmits<{
   "update:status": [value: FeedbackStatus | "all"];
   "update:sortBy": [value: FeedbackSortBy];
 }>();
+
+const categoryOptions = [...FEEDBACK_CATEGORY_OPTIONS];
+const statusOptions = [...FEEDBACK_STATUS_OPTIONS];
+const sortOptions = [...FEEDBACK_SORT_OPTIONS];
+
+function handleCategoryUpdate(value: unknown) {
+  emit("update:category", (value || "all") as FeedbackCategory | "all");
+}
+
+function handleStatusUpdate(value: unknown) {
+  emit("update:status", (value || "all") as FeedbackStatus | "all");
+}
+
+function handleSortUpdate(value: unknown) {
+  emit("update:sortBy", (value || "votes") as FeedbackSortBy);
+}
 </script>
 
 <template>
@@ -30,30 +46,30 @@ const emit = defineEmits<{
     >
       <USelect
         :model-value="category"
-        :items="FEEDBACK_CATEGORY_OPTIONS"
+        :items="categoryOptions"
         value-key="value"
         option-attribute="label"
         class="min-w-48"
-        @update:model-value="emit('update:category', $event)"
+        @update:model-value="handleCategoryUpdate"
       />
       <USelect
         :model-value="status"
-        :items="FEEDBACK_STATUS_OPTIONS"
+        :items="statusOptions"
         value-key="value"
         option-attribute="label"
         class="min-w-44"
-        @update:model-value="emit('update:status', $event)"
+        @update:model-value="handleStatusUpdate"
       />
     </div>
 
     <div class="lg:ml-auto">
       <USelect
         :model-value="sortBy"
-        :items="FEEDBACK_SORT_OPTIONS"
+        :items="sortOptions"
         value-key="value"
         option-attribute="label"
         class="min-w-40"
-        @update:model-value="emit('update:sortBy', $event)"
+        @update:model-value="handleSortUpdate"
       />
     </div>
   </div>

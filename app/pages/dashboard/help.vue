@@ -15,7 +15,7 @@ import type {
 } from "~/types/support.types";
 
 definePageMeta({
-  layout: "dashboard",
+  layout: "newdash",
 });
 
 const activeTab = ref<SupportTab>("faq");
@@ -27,6 +27,26 @@ const contactSubmitted = ref(false);
 const isLoadingFaq = ref(false);
 const supportArticles = ref<SupportArticle[]>([]);
 const availableCategories = ref<string[]>(["all"]);
+type SupportTicket = {
+  id: string;
+  title: string;
+  description: string;
+  module: string;
+  priority: string;
+  status: string;
+  updatedAtUtc: string;
+};
+type SupportTicketNote = {
+  id: string;
+  note: string;
+  createdAtUtc: string;
+};
+const supportTickets = ref<SupportTicket[]>([]);
+const selectedTicket = ref<SupportTicket | null>(null);
+const selectedTicketNotes = ref<SupportTicketNote[]>([]);
+const ticketReply = ref("");
+const isLoadingTickets = ref(false);
+const isSendingReply = ref(false);
 
 const contactForm = ref({
   subject: "",
@@ -105,6 +125,62 @@ const fetchSupport = async () => {
   }
 };
 
+const fetchTickets = async () => {
+  try {
+    isLoadingTickets.value = true;
+    const response = await $api.fetch<{ items?: SupportTicket[] }>(
+      "/api/support/tickets",
+      { method: "GET" },
+    );
+    supportTickets.value = response?.items || [];
+  } catch {
+    supportTickets.value = [];
+  } finally {
+    isLoadingTickets.value = false;
+  }
+};
+
+const openTicket = async (ticket: SupportTicket) => {
+  try {
+    const response = await $api.fetch<{
+      ticket?: SupportTicket;
+      notes?: SupportTicketNote[];
+    }>(`/api/support/tickets/${ticket.id}`, { method: "GET" });
+    selectedTicket.value = response?.ticket || ticket;
+    selectedTicketNotes.value = response?.notes || [];
+  } catch (error: any) {
+    toast.add({
+      title: "Could not open ticket",
+      description: error?.message || "Please try again.",
+      color: "error",
+    });
+  }
+};
+
+const sendTicketReply = async () => {
+  const message = ticketReply.value.trim();
+  if (!selectedTicket.value || !message) return;
+
+  try {
+    isSendingReply.value = true;
+    await $api.mutate(`/api/support/tickets/${selectedTicket.value.id}/reply`, {
+      method: "POST",
+      body: { message },
+    });
+    ticketReply.value = "";
+    await openTicket(selectedTicket.value);
+    await fetchTickets();
+  } catch (error: any) {
+    toast.add({
+      title: "Reply failed",
+      description: error?.message || "Could not send your reply.",
+      color: "error",
+    });
+  } finally {
+    isSendingReply.value = false;
+  }
+};
+
 watch(faqFilter, async () => {
   expandedFaq.value = null;
   await fetchSupport();
@@ -136,6 +212,7 @@ const handleContactSubmit = () => {
           priority,
         },
       });
+      await fetchTickets();
 
       contactSubmitted.value = true;
       setTimeout(() => {
@@ -157,7 +234,7 @@ const handleContactSubmit = () => {
   })();
 };
 
-await fetchSupport();
+await Promise.all([fetchSupport(), fetchTickets()]);
 </script>
 
 <template>
@@ -216,6 +293,74 @@ await fetchSupport();
         @update:form="contactForm = $event"
         @submit="handleContactSubmit"
       />
+
+      <UCard v-if="activeTab === 'contact'" class="ga-surface border shadow-sm">
+        <template #header>
+          <div>
+            <h3 class="ga-heading font-semibold">My support tickets</h3>
+            <p class="ga-muted text-sm">Track replies from the support team.</p>
+          </div>
+        </template>
+        <div v-if="isLoadingTickets" class="ga-muted py-4 text-sm">
+          Loading tickets...
+        </div>
+        <div v-else-if="supportTickets.length" class="space-y-2">
+          <button
+            v-for="ticket in supportTickets"
+            :key="ticket.id"
+            type="button"
+            class="ga-surface-soft flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left"
+            @click="openTicket(ticket)"
+          >
+            <div class="min-w-0">
+              <p class="ga-heading truncate text-sm font-semibold">{{ ticket.title }}</p>
+              <p class="ga-muted truncate text-xs">{{ ticket.module }} · {{ ticket.priority }}</p>
+            </div>
+            <UBadge variant="soft">{{ ticket.status }}</UBadge>
+          </button>
+        </div>
+        <p v-else class="ga-muted py-4 text-sm">No support tickets yet.</p>
+      </UCard>
+
+      <UModal :open="Boolean(selectedTicket)" @update:open="!$event && (selectedTicket = null)">
+        <template #content>
+          <div class="space-y-4 p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="ga-heading font-semibold">{{ selectedTicket?.title }}</h3>
+                <p class="ga-muted mt-1 text-sm">{{ selectedTicket?.description }}</p>
+              </div>
+              <UButton
+                icon="i-lucide-x"
+                color="neutral"
+                variant="ghost"
+                @click="selectedTicket = null"
+              />
+            </div>
+            <div class="max-h-64 space-y-2 overflow-y-auto">
+              <div
+                v-for="note in selectedTicketNotes"
+                :key="note.id"
+                class="ga-surface-soft rounded-xl border p-3"
+              >
+                <p class="text-sm">{{ note.note }}</p>
+              </div>
+              <p v-if="!selectedTicketNotes.length" class="ga-muted text-sm">
+                No replies yet.
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <UInput v-model="ticketReply" placeholder="Write a reply..." class="flex-1" />
+              <UButton
+                icon="i-lucide-send"
+                :loading="isSendingReply"
+                :disabled="!ticketReply.trim()"
+                @click="sendTicketReply"
+              />
+            </div>
+          </div>
+        </template>
+      </UModal>
     </div>
   </DashboardBodyLayout>
 </template>

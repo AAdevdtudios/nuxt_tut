@@ -77,7 +77,13 @@ const redirectTarget = computed(() => {
 });
 
 if (auth.hasSession) {
-  await navigateTo(redirectTarget.value);
+  try {
+    await auth.ensureValidAccessToken();
+    await auth.fetchCurrentUser();
+    await navigateTo(redirectTarget.value);
+  } catch {
+    auth.clearSession();
+  }
 }
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {

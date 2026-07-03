@@ -13,17 +13,9 @@ export default defineNuxtRouteMiddleware((to) => {
   const hasAnySession = hasStoreSession || hasCookieSession;
 
   if (to.path === loginPath || to.path.startsWith("/auth")) {
-    // Only redirect away from auth screens when we have an actual client session.
-    // A stale refresh cookie alone can cause redirect loops.
-    if (hasStoreSession && (to.path === loginPath || to.path.startsWith("/auth"))) {
-      const redirect =
-        typeof to.query.redirect === "string" && to.query.redirect.startsWith("/")
-          ? to.query.redirect
-          : "/dashboard";
-
-      return navigateTo(redirect);
-    }
-
+    // Don't auto-redirect away from auth screens here.
+    // The login/register pages themselves perform a validated redirect (refresh + /me),
+    // which prevents redirect loops with stale/expired sessions.
     return;
   }
 

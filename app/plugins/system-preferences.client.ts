@@ -3,17 +3,17 @@ import { useSystemPreferencesStore } from "~/stores/systemPreferences";
 
 const ACCENT_PALETTES: Record<string, Record<string, string>> = {
   primary: {
-    50: "#eef2ff",
-    100: "#e0e7ff",
-    200: "#c7d2fe",
-    300: "#a5b4fc",
-    400: "#818cf8",
-    500: "#6366f1",
-    600: "#4f46e5",
-    700: "#4338ca",
-    800: "#3730a3",
-    900: "#312e81",
-    950: "#1e1b4b",
+    50: "#f5f7f2",
+    100: "#e7ede2",
+    200: "#d1ddca",
+    300: "#afc2a5",
+    400: "#8fa584",
+    500: "#718766",
+    600: "#64775d",
+    700: "#50654c",
+    800: "#43523f",
+    900: "#384536",
+    950: "#1d261c",
   },
   blue: {
     50: "#eff6ff",
@@ -69,19 +69,33 @@ const ACCENT_PALETTES: Record<string, Record<string, string>> = {
   },
 };
 
-function applyAccent(accentColor: string) {
-  const palette = ACCENT_PALETTES[accentColor] || ACCENT_PALETTES.primary;
+function applyAccent(accentColor: string, isDark: boolean) {
+  const palette =
+    ACCENT_PALETTES[accentColor] || ACCENT_PALETTES.primary || {};
   const root = document.documentElement;
 
   Object.entries(palette).forEach(([shade, value]) => {
     root.style.setProperty(`--ui-color-primary-${shade}`, value);
   });
-  root.style.setProperty("--ui-primary", palette["500"]);
+  root.style.setProperty(
+    "--ui-primary",
+    palette["600"] || palette["500"] || "#004d4c",
+  );
+  root.style.setProperty("--ga-primary", (isDark ? palette["300"] : palette["600"]) || "#64775d");
+  root.style.setProperty("--ga-primary-strong", (isDark ? palette["200"] : palette["700"]) || "#50654c");
+  root.style.setProperty("--ga-primary-soft", (isDark ? palette["950"] : palette["50"]) || "#eff3ea");
+  root.style.setProperty("--ga-primary-soft-strong", (isDark ? palette["900"] : palette["100"]) || "#dfe9d7");
+  root.style.setProperty(
+    "--ga-glow-primary",
+    `color-mix(in srgb, ${(isDark ? palette["700"] : palette["200"]) || "#d1ddca"} 55%, transparent)`,
+  );
 }
 
 export default defineNuxtPlugin(() => {
   const preferences = useSystemPreferencesStore();
+  const colorMode = useColorMode();
   const nuxtApp = useNuxtApp();
+  let syncingTheme = false;
 
   watch(
     () => preferences.language,
@@ -111,10 +125,41 @@ export default defineNuxtPlugin(() => {
   );
 
   watch(
-    () => preferences.accentColor,
-    (accentColor) => {
-      applyAccent(accentColor || "primary");
+    [() => preferences.accentColor, () => colorMode.value],
+    ([accentColor, activeTheme]) => {
+      applyAccent(accentColor || "primary", activeTheme === "dark");
       document.documentElement.dataset.accent = accentColor || "primary";
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () => preferences.theme,
+    (theme) => {
+      const nextTheme = (theme || "system") as "system" | "light" | "dark";
+      if (syncingTheme || colorMode.preference === nextTheme) return;
+      syncingTheme = true;
+      colorMode.preference = nextTheme;
+      queueMicrotask(() => {
+        syncingTheme = false;
+      });
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () => colorMode.preference,
+    (preference) => {
+      const nextTheme = (preference || "system") as
+        | "system"
+        | "light"
+        | "dark";
+      if (syncingTheme || preferences.theme === nextTheme) return;
+      syncingTheme = true;
+      preferences.setTheme(nextTheme);
+      queueMicrotask(() => {
+        syncingTheme = false;
+      });
     },
     { immediate: true },
   );

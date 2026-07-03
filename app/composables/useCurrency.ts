@@ -8,6 +8,8 @@ interface CurrencyState {
   rates: ExchangeRates;
   selectedCurrency: string;
   lastUpdated: number;
+  hasUserSelectedCurrency?: boolean;
+  baseCurrencyVersion?: number;
 }
 
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
@@ -92,8 +94,10 @@ const supportedCurrencies = [
 
 const state = ref<CurrencyState>({
   rates: {},
-  selectedCurrency: "USD",
+  selectedCurrency: "GBP",
   lastUpdated: 0,
+  hasUserSelectedCurrency: false,
+  baseCurrencyVersion: 2,
 });
 
 // Load from localStorage on initialization
@@ -103,6 +107,10 @@ if (process.client) {
     try {
       const parsed = JSON.parse(saved);
       state.value = parsed;
+      if (!parsed.baseCurrencyVersion && !parsed.hasUserSelectedCurrency) {
+        state.value.selectedCurrency = "GBP";
+        state.value.baseCurrencyVersion = 2;
+      }
     } catch (e) {
       // Fallback to default
     }
@@ -180,13 +188,16 @@ export const useCurrency = () => {
 
   const convertPrice = (basePrice: number, toCurrency?: string): number => {
     const currency = toCurrency || state.value.selectedCurrency;
-    const rate = state.value.rates[currency] || 1;
+    const targetRate = state.value.rates[currency] || (currency === "GBP" ? 0.79 : 1);
+    const gbpRate = state.value.rates.GBP || 0.79;
 
-    if (currency === "USD") {
+    if (currency === "GBP") {
       return basePrice;
     }
 
-    return basePrice * rate;
+    // Exchange API rates are USD-based. Backend prices are GBP-based, so convert
+    // GBP -> USD -> target currency.
+    return (basePrice / gbpRate) * targetRate;
   };
 
   const formatPrice = (price: number, currency?: string): string => {
@@ -206,6 +217,8 @@ export const useCurrency = () => {
   const setCurrency = (code: string) => {
     if (supportedCurrencies.find((c) => c.code === code)) {
       state.value.selectedCurrency = code;
+      state.value.hasUserSelectedCurrency = true;
+      state.value.baseCurrencyVersion = 2;
       saveTolocalStorage();
     }
   };

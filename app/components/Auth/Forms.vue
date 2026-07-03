@@ -22,11 +22,27 @@ const emit = defineEmits([
 function onSubmit(payload: FormSubmitEvent<any>) {
   emit("submit", payload);
 }
+
+const authFormRef = ref<any>(null);
+
+function setFieldErrors(errors: Array<{ name: string; message: string }>) {
+  authFormRef.value?.formRef?.setErrors?.(errors);
+}
+
+function clearFieldErrors() {
+  authFormRef.value?.formRef?.clear?.();
+}
+
+defineExpose({
+  setFieldErrors,
+  clearFieldErrors,
+});
 </script>
 
 <template>
   <UPageCard class="w-full max-w-md">
     <UAuthForm
+      ref="authFormRef"
       :schema="props.schema"
       :fields="props.fields"
       :providers="props.providers"
