@@ -36,23 +36,6 @@ const fields: AuthFormField[] = [
   },
 ];
 
-const providers = [
-  {
-    label: "Google",
-    icon: "i-simple-icons-google",
-    onClick: () => {
-      toast.add({ title: "Google", description: "Login with Google" });
-    },
-  },
-  {
-    label: "GitHub",
-    icon: "i-simple-icons-github",
-    onClick: () => {
-      toast.add({ title: "GitHub", description: "Login with GitHub" });
-    },
-  },
-];
-
 const schema = z.object({
   email: z.email("Invalid email"),
   password: z
@@ -111,7 +94,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   <div class="flex flex-col items-center justify-center gap-4 p-4">
     <AuthForms
       :fields="fields"
-      :providers="providers"
       :schema="schema"
       :loading="pending"
       title="Welcome back!"

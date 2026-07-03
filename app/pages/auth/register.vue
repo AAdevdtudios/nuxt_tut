@@ -53,23 +53,6 @@ const fields: AuthFormField[] = [
   },
 ];
 
-const providers = [
-  {
-    label: "Google",
-    icon: "i-simple-icons-google",
-    onClick: () => {
-      toast.add({ title: "Google", description: "Create account with Google" });
-    },
-  },
-  {
-    label: "GitHub",
-    icon: "i-simple-icons-github",
-    onClick: () => {
-      toast.add({ title: "GitHub", description: "Create account with GitHub" });
-    },
-  },
-];
-
 const schema = z.object({
   name: z.string("Full name is required").min(3, "Must be at least 3 characters"),
   displayName: z
@@ -145,7 +128,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     <AuthForms
       ref="authFormRef"
       :fields="fields"
-      :providers="providers"
       :schema="schema"
       :loading="pending"
       title="Create an account"
