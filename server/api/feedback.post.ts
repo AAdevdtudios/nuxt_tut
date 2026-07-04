@@ -13,6 +13,7 @@ const FeedbackCreateSchema = z.object({
   title: z.string().trim().min(3).max(200),
   description: z.string().trim().min(10).max(5000),
   overallExperienceRating: z.number().int().min(1).max(5),
+  imageUrls: z.array(z.string().max(600)).max(3).optional(),
 });
 
 export default defineEventHandler(async (event) => {

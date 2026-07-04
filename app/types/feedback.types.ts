@@ -20,6 +20,8 @@ export interface FeedbackItem {
   isOwner: boolean;
   createdAtUtc: string;
   updatedAtUtc: string;
+  imageUrls?: string[];
+  awardedPoints?: number;
 }
 
 export interface FeedbackListResponse {

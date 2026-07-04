@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import FeedbackDialog from "~/components/Feedback/Dialog.vue";
 import FeedbackFilters from "~/components/Feedback/Filters.vue";
-import FeedbackForm from "~/components/Feedback/Form.vue";
 import FeedbackList from "~/components/Feedback/List.vue";
 import type {
   FeedbackCategory,
@@ -20,23 +20,13 @@ const { $api } = useNuxtApp();
 
 const feedbackList = ref<FeedbackItem[]>([]);
 const isLoading = ref(false);
-const isSubmitting = ref(false);
 const showForm = ref(false);
-const submitted = ref(false);
 const expandedId = ref<string | null>(null);
 const filterCategory = ref<FeedbackCategory | "all">("all");
 const filterStatus = ref<FeedbackStatus | "all">("all");
 const sortBy = ref<FeedbackSortBy>("votes");
-const rating = ref(0);
-const hoverRating = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
-
-const form = ref({
-  title: "",
-  description: "",
-  category: "feature-request" as FeedbackCategory,
-});
 
 const filteredFeedback = computed(() => {
   const list = [...feedbackList.value]
@@ -60,13 +50,6 @@ const filteredFeedback = computed(() => {
   );
 });
 
-const canSubmit = computed(
-  () =>
-    form.value.title.trim().length >= 3 &&
-    form.value.description.trim().length >= 10 &&
-    rating.value >= 1,
-);
-
 const formatRelativeDate = (value: string) => {
   const timestamp = new Date(value).getTime();
   const diffMs = Date.now() - timestamp;
@@ -89,16 +72,6 @@ const formatRelativeDate = (value: string) => {
     day: "numeric",
     year: "numeric",
   });
-};
-
-const resetForm = () => {
-  form.value = {
-    title: "",
-    description: "",
-    category: "feature-request",
-  };
-  rating.value = 0;
-  hoverRating.value = 0;
 };
 
 const fetchFeedback = async () => {
@@ -125,39 +98,12 @@ const fetchFeedback = async () => {
   }
 };
 
-const submitFeedback = async () => {
-  if (!canSubmit.value) return;
+const openForm = () => {
+  showForm.value = true;
+};
 
-  try {
-    isSubmitting.value = true;
-
-    const created = await $api.mutate<FeedbackItem>("/api/feedback", {
-      method: "POST",
-      body: {
-        category: form.value.category,
-        title: form.value.title.trim(),
-        description: form.value.description.trim(),
-        overallExperienceRating: rating.value,
-      },
-    });
-
-    feedbackList.value = [created, ...feedbackList.value];
-    submitted.value = true;
-    resetForm();
-
-    setTimeout(() => {
-      submitted.value = false;
-      showForm.value = false;
-    }, 1800);
-  } catch (error: any) {
-    toast.add({
-      title: "Submit failed",
-      description: error?.message || "Could not submit feedback.",
-      color: "error",
-    });
-  } finally {
-    isSubmitting.value = false;
-  }
+const handleSubmitted = (created: FeedbackItem) => {
+  feedbackList.value = [created, ...feedbackList.value];
 };
 
 const toggleVote = async (feedbackId: string) => {
@@ -209,26 +155,14 @@ await fetchFeedback();
       <UButton
         icon="i-lucide-message-square-plus"
         color="primary"
-        @click="showForm = !showForm"
+        @click="openForm"
       >
         New Feedback
       </UButton>
     </template>
 
     <div class="space-y-6">
-      <FeedbackForm
-        v-if="showForm"
-        v-model="form"
-        :rating="rating"
-        :hover-rating="hoverRating"
-        :submitted="submitted"
-        :is-submitting="isSubmitting"
-        :can-submit="canSubmit"
-        @update:rating="rating = $event"
-        @update:hover-rating="hoverRating = $event"
-        @cancel="showForm = false"
-        @submit="submitFeedback"
-      />
+      <FeedbackDialog v-model:open="showForm" @submitted="handleSubmitted" />
 
       <FeedbackFilters
         :category="filterCategory"

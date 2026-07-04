@@ -71,6 +71,11 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
   ],
 ]);
 
+const isFeedbackOpen = ref(false);
+function openFeedback() {
+  isFeedbackOpen.value = true;
+}
+
 onMounted(async () => {
   if (auth.hasSession && !auth.currentUser) {
     try {
@@ -117,12 +122,12 @@ onMounted(async () => {
 
       <div class="flex shrink-0 items-center gap-2">
         <UButton
-          to="/dashboard/feedback"
           icon="i-lucide-message-square-heart"
           color="neutral"
           variant="ghost"
           class="rounded-xl"
           aria-label="Send feedback"
+          @click="openFeedback"
         >
           <span class="hidden sm:inline">Feedback</span>
         </UButton>
@@ -146,5 +151,7 @@ onMounted(async () => {
     >
       <slot />
     </main>
+
+    <FeedbackDialog v-model:open="isFeedbackOpen" />
   </div>
 </template>
