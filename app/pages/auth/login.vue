@@ -51,6 +51,9 @@ type Schema = z.output<typeof schema>;
 const showError = ref(false);
 const pending = ref(false);
 const errorMessage = ref("");
+// Only surfaced after a login attempt fails because the account is
+// soft-deleted; the recovery path is invisible noise for everyone else.
+const isDeletedAccount = ref(false);
 const auth = useAuthStore();
 const route = useRoute();
 const authFormRef = ref<{
@@ -80,6 +83,7 @@ if (auth.hasSession) {
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   showError.value = false;
+  isDeletedAccount.value = false;
   pending.value = true;
   authFormRef.value?.clearFieldErrors();
   try {
@@ -106,6 +110,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     } else {
       errorMessage.value = error?.message || "Login failed. Please try again.";
       showError.value = true;
+      isDeletedAccount.value = /account is deleted/i.test(errorMessage.value);
       toast.add({
         title: "Login failed",
         description: errorMessage.value,
@@ -149,11 +154,18 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
         </div>
       </template>
       <template #footer>
+        <UButton
+          v-if="isDeletedAccount"
+          to="/auth/recover-account"
+          icon="i-lucide-rotate-ccw"
+          color="primary"
+          variant="soft"
+          block
+          class="mb-3 rounded-xl"
+        >
+          Recover your account
+        </UButton>
         <div class="text-sm text-center text-muted-foreground">
-          <ULink to="/auth/recover-account" class="text-primary font-medium">
-            Recover a deleted account
-          </ULink>
-          <span class="mx-2">·</span>
           By logging in, you agree to our
           <ULink to="/terms" class="text-primary font-medium"
             >Terms of Service</ULink
