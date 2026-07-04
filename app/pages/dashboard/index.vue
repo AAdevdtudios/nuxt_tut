@@ -90,18 +90,18 @@ const materialTypeLabel = computed(() => {
 
 const streamSteps = [
   {
-    title: "Upload material",
-    description: "Start with one PDF, document, markdown file, or study link.",
+    title: "Upload your notes",
+    description: "PDF, document, or a link.",
     icon: "i-lucide-file-up",
   },
   {
-    title: "Confirm topics",
-    description: "GapAI extracts topics from your material. You choose the ones you want to study.",
-    icon: "i-lucide-list-checks",
+    title: "Take a short test",
+    description: "GapAI finds your real level.",
+    icon: "i-lucide-clipboard-check",
   },
   {
-    title: "Unlock paths",
-    description: "Only the active path opens. Later stages stay locked until you pass.",
+    title: "Unlock topic by topic",
+    description: "Pass each stage to move on.",
     icon: "i-lucide-route",
   },
 ];
@@ -390,18 +390,35 @@ onMounted(() => {
       <div class="relative mx-auto max-w-4xl text-center">
         <div>
           <p class="ga-link mb-3 text-xs font-bold uppercase tracking-[0.24em]">
-            Adaptive study stream
+            Start here
           </p>
           <h1
-            class="ga-heading mx-auto max-w-4xl font-serif text-3xl font-semibold leading-tight sm:text-5xl lg:text-6xl"
+            class="ga-heading mx-auto max-w-3xl font-serif text-2xl font-semibold leading-tight sm:text-4xl lg:text-5xl"
           >
-            Upload material, {{ firstName }}. GapAI will test you first.
+            Upload your material, {{ firstName }}. GapAI tests you first.
           </h1>
-          <p class="ga-muted mx-auto mt-4 max-w-2xl text-sm leading-6 sm:text-base">
-            Drop your PDF, DOCX, TXT, or MD — or paste a link. GapAI reads it,
-            extracts the key topics, lets you confirm which ones to study, then
-            unlocks one path at a time as you pass each stage.
+          <p class="ga-muted mx-auto mt-3 max-w-xl text-sm leading-6">
+            No setup, no choices to get wrong. Drop in your notes and GapAI
+            takes it from there.
           </p>
+
+          <div class="mx-auto mt-6 flex max-w-2xl flex-col justify-center gap-2 sm:flex-row sm:gap-3">
+            <div
+              v-for="(step, index) in streamSteps"
+              :key="step.title"
+              class="flex flex-1 items-center gap-2.5 rounded-2xl border border-[var(--ga-border)] bg-[var(--ga-surface)] px-3 py-2.5 text-left"
+            >
+              <span
+                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--ga-primary)] text-xs font-bold text-white"
+              >
+                {{ index + 1 }}
+              </span>
+              <div class="min-w-0">
+                <p class="ga-heading text-xs font-semibold">{{ step.title }}</p>
+                <p class="ga-subtle text-[11px] leading-4">{{ step.description }}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div
@@ -434,11 +451,11 @@ onMounted(() => {
               <UIcon name="i-lucide-file-up" class="h-7 w-7" />
             </div>
             <p class="ga-heading mt-4 text-base font-semibold">
-              {{ selectedFile ? selectedFile.name : "Drop material here" }}
+              {{ selectedFile ? selectedFile.name : "Drop your material here" }}
             </p>
             <p class="ga-muted mt-1 max-w-md text-sm leading-6">
-              The first step is always a diagnostic test. You do not choose
-              random paths; GapAI unlocks them as you progress.
+              PDF, DOCX, TXT, or MD. GapAI starts with a short placement test
+              so your first topic opens at the right level.
             </p>
           </button>
 
@@ -558,7 +575,7 @@ onMounted(() => {
             <div class="grid gap-2 sm:grid-cols-2 lg:flex lg:justify-end">
               <UButton
                 icon="i-lucide-file-question"
-                :label="isStartingQuickPractice ? 'Preparing questions...' : 'Quick question generator'"
+                :label="isStartingQuickPractice ? 'Preparing questions...' : 'Quick practice (5 questions)'"
                 color="neutral"
                 variant="soft"
                 class="w-full justify-center rounded-xl lg:w-auto"
@@ -568,7 +585,7 @@ onMounted(() => {
               />
               <UButton
                 icon="i-lucide-arrow-up"
-                :label="isStarting ? 'Creating stream...' : 'Start study stream'"
+                :label="isStarting ? 'Setting things up...' : 'Start studying'"
                 color="primary"
                 class="w-full justify-center rounded-xl lg:w-auto"
                 :loading="isStarting"
@@ -581,22 +598,6 @@ onMounted(() => {
       </div>
     </section>
 
-    <section class="grid gap-3 sm:grid-cols-3">
-      <div
-        v-for="step in streamSteps"
-        :key="step.title"
-        class="ga-surface ga-hover-card rounded-2xl border p-5"
-      >
-        <div
-          class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--ga-primary-soft)] text-[var(--ga-primary)]"
-        >
-          <UIcon :name="step.icon" class="h-5 w-5" />
-        </div>
-        <h3 class="ga-heading mt-4 text-sm font-semibold">{{ step.title }}</h3>
-        <p class="ga-muted mt-1 text-xs leading-5">{{ step.description }}</p>
-      </div>
-    </section>
-
     <section class="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
       <div>
         <div class="mb-4 flex items-end justify-between">
@@ -604,7 +605,7 @@ onMounted(() => {
             <p class="ga-subtle text-xs font-bold uppercase tracking-[0.2em]">
               Continue exam prep
             </p>
-            <h2 class="ga-heading mt-1 font-serif text-3xl font-semibold">
+            <h2 class="ga-heading mt-1 font-serif text-2xl font-semibold">
               Study sessions
             </h2>
           </div>
@@ -693,7 +694,7 @@ onMounted(() => {
             No study sessions yet
           </h3>
           <p class="ga-muted mx-auto mt-2 max-w-md text-sm leading-6">
-            Start a diagnostic stream above. Your real backend study sessions will appear here.
+            Upload your first material above and it will appear here.
           </p>
         </div>
       </div>
@@ -702,7 +703,7 @@ onMounted(() => {
         <p class="ga-subtle text-xs font-bold uppercase tracking-[0.2em]">
           A clear next step
         </p>
-        <h2 class="ga-heading mt-1 font-serif text-3xl font-semibold">
+        <h2 class="ga-heading mt-1 font-serif text-2xl font-semibold">
           Suggested actions
         </h2>
         <div class="mt-4 space-y-3">
