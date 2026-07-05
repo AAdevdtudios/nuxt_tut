@@ -177,5 +177,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
         </div>
       </template>
     </AuthForms>
+    <AuthGoogleButton :redirect="redirectTarget" />
   </div>
 </template>

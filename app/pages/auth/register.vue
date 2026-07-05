@@ -154,5 +154,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
         >.
       </template>
     </AuthForms>
+    <AuthGoogleButton />
   </div>
 </template>

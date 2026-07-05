@@ -42,6 +42,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     API_BASE_URL: process.env.API_BASE_URL || "http://localhost:5296",
+    public: {
+      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
+    },
   },
   // nitro: {
   //   prerender: {

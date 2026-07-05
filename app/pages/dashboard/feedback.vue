@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import FeedbackDialog from "~/components/Feedback/Dialog.vue";
+import { computed, ref, watch } from "vue";
 import FeedbackFilters from "~/components/Feedback/Filters.vue";
 import FeedbackList from "~/components/Feedback/List.vue";
 import type {
@@ -17,10 +16,11 @@ definePageMeta({
 
 const toast = useToast();
 const { $api } = useNuxtApp();
+// The dialog lives once in the layout; open it and react to submissions here.
+const { open: openFeedbackDialog, lastSubmitted } = useFeedbackDialog();
 
 const feedbackList = ref<FeedbackItem[]>([]);
 const isLoading = ref(false);
-const showForm = ref(false);
 const expandedId = ref<string | null>(null);
 const filterCategory = ref<FeedbackCategory | "all">("all");
 const filterStatus = ref<FeedbackStatus | "all">("all");
@@ -98,13 +98,12 @@ const fetchFeedback = async () => {
   }
 };
 
-const openForm = () => {
-  showForm.value = true;
-};
-
-const handleSubmitted = (created: FeedbackItem) => {
-  feedbackList.value = [created, ...feedbackList.value];
-};
+// New submissions from the shared dialog appear at the top of the list.
+watch(lastSubmitted, (created) => {
+  if (created) {
+    feedbackList.value = [created, ...feedbackList.value];
+  }
+});
 
 const toggleVote = async (feedbackId: string) => {
   const current = feedbackList.value.find((item) => item.id === feedbackId);
@@ -155,15 +154,13 @@ await fetchFeedback();
       <UButton
         icon="i-lucide-message-square-plus"
         color="primary"
-        @click="openForm"
+        @click="openFeedbackDialog"
       >
         New Feedback
       </UButton>
     </template>
 
     <div class="space-y-6">
-      <FeedbackDialog v-model:open="showForm" @submitted="handleSubmitted" />
-
       <FeedbackFilters
         :category="filterCategory"
         :status="filterStatus"

@@ -71,10 +71,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
   ],
 ]);
 
-const isFeedbackOpen = ref(false);
-function openFeedback() {
-  isFeedbackOpen.value = true;
-}
+const { isOpen: isFeedbackOpen, open: openFeedback } = useFeedbackDialog();
 
 onMounted(async () => {
   if (auth.hasSession && !auth.currentUser) {

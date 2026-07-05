@@ -7,12 +7,9 @@ import type { FeedbackCategory, FeedbackItem } from "~/types/feedback.types";
 
 const open = defineModel<boolean>("open", { required: true });
 
-const emit = defineEmits<{
-  submitted: [item: FeedbackItem];
-}>();
-
 const toast = useToast();
 const { $api } = useNuxtApp();
+const { markSubmitted } = useFeedbackDialog();
 
 const title = ref("");
 const description = ref("");
@@ -117,7 +114,7 @@ async function submit() {
       description: "Feedback received. Useful reports earn beta rewards.",
       color: "success",
     });
-    emit("submitted", created);
+    markSubmitted(created);
     resetForm();
     open.value = false;
   } catch (error: any) {
